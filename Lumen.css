@@ -1,0 +1,131 @@
+body {
+    color: white;
+    background-color: #2d2d2d;
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    padding-bottom: 200px; /* room for input box */
+}
+
+.title {
+    text-align: center;
+    font-size: 60px;
+    margin-top: 30px;
+}
+
+.title2 {
+    font-family: 'Courier New', Courier, monospace;
+    text-align: center;
+    font-size: 32px;
+    color: #ccc;
+}
+
+.subtitle {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 500;
+    color: #aaa;
+}
+
+.userMessage, .lumenMessage {
+    animation: fadeIn 0.4s ease;
+    transition: all 0.2s ease;
+    padding: 15px;
+    border-radius: 15px;
+    width: fit-content;
+    max-width: 80%;
+    font-size: 16px;
+    word-wrap: break-word;
+    line-height: 1.5;
+    margin: 12px auto;
+}
+
+.userMessage {
+    background-color: #444;
+    color: white;
+    margin-left: auto;
+    margin-right: 20px;
+}
+
+.lumenMessage {
+    background-color: #3a3a3a;
+    color: white;
+    margin-right: auto;
+    margin-left: 20px;
+}
+
+.input-box-container {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 45%;
+    background-color: #1f1f1f;
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.6);
+    z-index: 99;
+}
+
+#userMessageInput {
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #333;
+    color: white;
+    font-size: 16px;
+    outline: none;
+}
+
+#fileUploader {
+    padding: 6px 10px;
+    font-size: 13px;
+    border: none;
+    border-radius: 6px;
+    background-color: #555;
+    color: white;
+    cursor: pointer;
+}
+
+/* 💻 CODE BLOCK STYLE */
+.code {
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 8px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    padding: 15px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    color: #dcdcdc;
+}
+
+/* ⚡ Fade in animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 📱 Responsive */
+@media screen and (max-width: 768px) {
+    .input-box-container {
+        width: 90%;
+    }
+    .userMessage, .lumenMessage {
+        max-width: 90%;
+        font-size: 15px;
+    }
+}
+.lumenImage {
+  max-width: 100%;
+  margin-top: 10px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(255,255,255,0.1);
+}
