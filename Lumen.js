@@ -71,7 +71,7 @@ async function response(userInput) {
     userInput = userInput.toLowerCase();
     previousMessages.push(userInput);
 
-    const res = await fetch('https://timely-2.onrender.com/ask', {
+    const res = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: userInput, system: systemPrompt })
@@ -82,7 +82,7 @@ async function response(userInput) {
     const lumenUser = { premium: true };
 
     if (lumenUser.premium && reply.toLowerCase().includes('image requested')) {
-        const imageRes = await fetch('https://timely-2.onrender.com/ask', {
+        const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ type: 'image', prompt: userInput })
