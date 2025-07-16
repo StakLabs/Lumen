@@ -9,6 +9,11 @@ dotenv.config();
 const app = express();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const models = await openai.models.list();
+models.data
+  .filter(m => m.id.includes("dall-e"))
+  .forEach(m => console.log(m.id));
+
 app.use(cors({
   origin: ['https://www.timelypro.online', 'http://127.0.0.1:5500', 'https://staklabs.github.io'],
   methods: ['POST']
