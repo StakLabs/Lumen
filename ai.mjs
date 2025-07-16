@@ -10,7 +10,7 @@ const app = express();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.use(cors({
-  origin: ['https://www.timelypro.online', 'http://127.0.0.1:5500'],
+  origin: ['https://www.timelypro.online', 'http://127.0.0.1:5500', 'https://staklabs.github.io'],
   methods: ['POST']
 }));
 app.use(express.json());
