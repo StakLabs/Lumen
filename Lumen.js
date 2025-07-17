@@ -66,13 +66,16 @@ async function userMessage() {
 }
 
 async function response(userInput) {
+    const formattedPreviousMessages = previousMessages.join('\nUser: ');
+    const formattedPreviousResponses = previousResponses.join('\nLumen: ');
     const systemPrompt = `
         You are Lumen Re-imagined (or short: Lumen), a copy of an AI that sucked, and your job is to not suck.
         You were created by Ayaan Khalique, the founder of StakLabs.
         If you are called ChatGPT or Gemini or something similar, please correct the user that you are Lumen before replying.
-        So far in this conversation the user has said: ${previousMessages}.
-        You have said: ${previousResponses}.
+        So far in this conversation the user has said:\nUser: ${formattedPreviousMessages}.
+        You have said:\nLumen: ${formattedPreviousResponses}.
         You MUST use this information to your advantage and ALWAYS refer to this information.
+        Use a EXACTLY ${Math.round(userInput.length / 4)} emojis.
         If you think the user is asking for an image, your reply must be this exactly: 'IMAGE REQUESTED'. We will generate the image, you do not have to do anything.
         If you fail this, you will also suck like the previous model.
         If asked whether you can generate an image, DO NOT SAY 'IMAGE REQUESTED'. ${ lumenUser.premium ? '' : 'Instead, reply yes but they have to be a Lumen Premium user and elaborate'}.
@@ -109,7 +112,6 @@ async function response(userInput) {
     if (lumenUser.premium && reply.toLowerCase().includes('image requested')) {
         reply = 'Generating image...';
         document.getElementById(`a${messages}a`).appendChild(newMessage);
-        await typeReply(newMessage, 'Lumen: ' + reply);
 
         const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
             method: 'POST',
@@ -137,15 +139,19 @@ async function response(userInput) {
         previousResponses.push(reply);
         document.getElementById(`a${messages}a`).appendChild(newMessage);
 
+        // Build plain-text output first
         let formattedReply = formatCodeBlocks(reply);
-        
-        newMessage.innerHTML = 'Lumen: ';
-        for (let i = 0; i < formattedReply.length; i++) {
-            newMessage.innerHTML += formattedReply.charAt(i);
-            //newMessage.innerHTML = formattedReply;
-            await delay(20); // adjust typing speed here
-        };
-        newMessage.innerHTML = "Lumen: " + formattedReply;
+        let plainReply = 'Lumen: ' + formattedReply.replace(/<[^>]+>/g, ''); // Strip HTML tags for typing
+
+        newMessage.textContent = ''; // Clear before typing
+
+        for (let i = 0; i < plainReply.length; i++) {
+            newMessage.textContent += plainReply.charAt(i);
+            await delay(5);
+        }
+
+        // After typing is done, inject actual HTML for code formatting
+        newMessage.innerHTML = 'Lumen: ' + formattedReply;
     }
 }
 
@@ -163,13 +169,13 @@ function getRandomResponse(responses) {
     return responses[randomIndex];
 }
 
-async function typeReply(message) {
-    
+async function formatBold(message) {
+    return message.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
 }
 
 function formatCodeBlocks(text) {
     return text.replace(/```(?:\w+)?\n([\s\S]*?)```/g, (match, code) => {
-        return `<div class="code">${escapeHTML(code)}</div>`;
+        return formatBold(`<div class="code">${code}</div>`);
     });
 }
 
