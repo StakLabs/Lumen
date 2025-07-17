@@ -3,7 +3,7 @@ let previousResponses = [];
 let previousMessages = [];
 
 lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
-if (!lumenUser) window.location.href = 'l.html';
+// if (!lumenUser) window.location.href = 'l.html';
 
 document.getElementById('fileUploader').addEventListener('change', function(event) {
     alert('This feature is still in development. Your file will not be sent to Lumen AI. To learn more, you may email us at staklabsofficial@gmail.com');
@@ -87,12 +87,12 @@ async function response(userInput) {
 
     const data = await res.json();
     let reply = data.reply || data.choices?.[0]?.message?.content || "";
-    //const lumenUser = { premium: true };
 
     if (lumenUser.premium && reply.toLowerCase().includes('image requested')) {
-        reply = 'Generating image...'
+        reply = 'Generating image...';
         document.getElementById(`a${messages}a`).appendChild(newMessage);
-        newMessage.innerHTML = 'Lumen: ' + reply;
+        await typeReply(newMessage, 'Lumen: ' + reply);
+
         const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -102,27 +102,33 @@ async function response(userInput) {
         const imageData = await imageRes.json();
         const imageTarget = document.getElementById(`image${previousMessages.length}`);
         imageTarget.classList.add('lumenMessage');
+
         if (imageTarget && imageData.image_url) {
             imageTarget.src = imageData.image_url;
             previousResponses.push(imageData.image_url + ' THE USER REQUESTED AN IMAGE');
         } else {
             previousResponses.push('IMAGE ERROR or NO PLACE TO DISPLAY IMAGE');
         }
+
     } else if (!lumenUser.premium && reply.toLowerCase().includes('image requested')) {
         reply = 'You must be a premium user to generate images';
         previousResponses.push(reply);
+        document.getElementById(`a${messages}a`).appendChild(newMessage);
+        await typeReply(newMessage, 'Lumen: ' + reply);
     } else {
         previousResponses.push(reply);
+        document.getElementById(`a${messages}a`).appendChild(newMessage);
+
+        let formattedReply = formatCodeBlocks(reply);
+        
+        newMessage.innerHTML = 'Lumen: ';
+        for (let i = 0; i < formattedReply.length; i++) {
+            newMessage.innerHTML += formattedReply.charAt(i);
+            //newMessage.innerHTML = formattedReply;
+            await delay(20); // adjust typing speed here
+        };
+        newMessage.innerHTML = "Lumen: " + formattedReply;
     }
-
-    document.getElementById(`a${messages}a`).appendChild(newMessage);
-
-    let formattedReply = reply.replace(/```/g, (match, offset, string) => {
-        const count = (string.slice(0, offset).match(/```/g) || []).length;
-        return count % 2 === 0 ? '<div class="code">' : '</div>';
-    });
-
-    newMessage.innerHTML = 'Lumen: ' + formattedReply;
 }
 
 function delay(ms) {
@@ -137,4 +143,20 @@ function format(time) {
 function getRandomResponse(responses) {
     const randomIndex = Math.floor(Math.random() * responses.length);
     return responses[randomIndex];
+}
+
+async function typeReply(message) {
+    
+}
+
+function formatCodeBlocks(text) {
+    return text.replace(/```(?:\w+)?\n([\s\S]*?)```/g, (match, code) => {
+        return `<div class="code">${escapeHTML(code)}</div>`;
+    });
+}
+
+function escapeHTML(str) {
+    return str.replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
 }
