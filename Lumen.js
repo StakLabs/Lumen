@@ -6,9 +6,9 @@ const lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
 if (!lumenUser) window.location.href = 'l.html';
 let acrossChats = JSON.parse(localStorage.getItem('across_' + lumenUser.username)) || [];
 
-document.getElementById('fileUploader').addEventListener('change', function(event) {
+/*document.getElementById('fileUploader').addEventListener('change', function(event) {
     alert('This feature is still in development. Your file will not be sent to Lumen AI. To learn more, you may email us at staklabsofficial@gmail.com');
-});
+});*/
 document.querySelector('.brain').addEventListener('click', () => {
     if (confirm('Would you like Lumen to remember this over the next few chats?')) {
         localStorage.setItem('yes', true);
@@ -37,10 +37,6 @@ async function getTime() {
 getTime();
 
 async function userMessage() {
-    if (document.getElementById('fileUploader').value) {
-        let queuedImages = [];
-    }
-
     if (wait == 0) {
         var userInput = document.querySelector('#userMessageInput').value;
         if (userInput) {
@@ -66,6 +62,10 @@ async function userMessage() {
 }
 
 async function response(userInput) {
+    if (userInput.toLowerCase().trim() === "lumen.exe") {
+        window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
+        return;
+    }
     const formattedPreviousMessages = previousMessages.join('\nUser: ');
     const formattedPreviousResponses = previousResponses.join('\nLumen: ');
     const systemPrompt = `
@@ -103,7 +103,7 @@ async function response(userInput) {
     const res = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userInput, system: systemPrompt })
+        body: JSON.stringify({ prompt: userInput, system: systemPrompt, model: lumenUser.premium ? 'Premium' : 'Free' })
     });
 
     const data = await res.json();
@@ -120,8 +120,9 @@ async function response(userInput) {
         });
 
         const imageData = await imageRes.json();
-        const imageTarget = document.getElementById(`image${previousMessages.length}`);
+        const imageTarget = document.getElementById(`image${previousMessages.length}`); 
         imageTarget.classList.add('lumenMessage');
+        imageTarget.classList.add('img');
 
         if (imageTarget && imageData.image_url) {
             imageTarget.src = imageData.image_url;
@@ -139,9 +140,8 @@ async function response(userInput) {
         previousResponses.push(reply);
         document.getElementById(`a${messages}a`).appendChild(newMessage);
 
-        // Build plain-text output first
-        let formattedReply = formatCodeBlocks(reply);
-        let plainReply = 'Lumen: ' + formattedReply.replace(/<[^>]+>/g, ''); // Strip HTML tags for typing
+        let formattedReply = await formatCodeBlocks(reply);
+        let plainReply = 'Lumen: ' + formattedReply.replace(/<[^>]+>/g, '');
 
         newMessage.textContent = ''; // Clear before typing
 
@@ -169,7 +169,7 @@ function getRandomResponse(responses) {
     return responses[randomIndex];
 }
 
-async function formatBold(message) {
+function formatBold(message) {
     return message.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
 }
 
