@@ -3,10 +3,17 @@ let previousResponses = [];
 let previousMessages = [];
 
 const lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
-// if (!lumenUser) window.location.href = 'l.html';
+if (!lumenUser) window.location.href = 'l.html';
+let acrossChats = JSON.parse(localStorage.getItem('across_' + lumenUser.username)) || [];
 
 document.getElementById('fileUploader').addEventListener('change', function(event) {
     alert('This feature is still in development. Your file will not be sent to Lumen AI. To learn more, you may email us at staklabsofficial@gmail.com');
+});
+document.querySelector('.brain').addEventListener('click', () => {
+    if (confirm('Would you like Lumen to remember this over the next few chats?')) {
+        localStorage.setItem('yes', true);
+        alert('Lumen will now remember this when you send the message');
+    }
 });
 
 var messages = 0;
@@ -72,7 +79,14 @@ async function response(userInput) {
         If asked whether they should buy lumen premium, reply yes and elaborate.
         If asked what you can do, say you can write code, generate images, and reply to any question and elaborate.
         The user's name is ${lumenUser.username}.
+        The user chose to have you to remember these inputs from a few chats ago: ${acrossChats}.
+        ${localStorage.getItem('yes') ? '' : 'Inform the user that they can hit the brain emoji on the right of the textbox for you to remember something'}
     `;
+    if (localStorage.getItem('yes')) {
+        localStorage.setItem('yes', false);
+        acrossChats.push(userInput);
+        localStorage.setItem('across_' + lumenUser.username, JSON.stringify(acrossChats));
+    }
 
     var newMessage = document.createElement('p');
     newMessage.classList.add('lumenMessage');
