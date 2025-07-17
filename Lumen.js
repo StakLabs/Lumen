@@ -2,7 +2,7 @@ let imageFile = null;
 let previousResponses = [];
 let previousMessages = [];
 
-lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
+const lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
 // if (!lumenUser) window.location.href = 'l.html';
 
 document.getElementById('fileUploader').addEventListener('change', function(event) {
@@ -71,6 +71,7 @@ async function response(userInput) {
         If asked whether you can generate an image, DO NOT SAY 'IMAGE REQUESTED'. Instead, reply yes but they have to be a Luem Premium user and elaborate.
         If asked whether they should buy lumen premium, reply yes and elaborate.
         If asked what you can do, say you can write code, generate images, and reply to any question and elaborate.
+        The user's name is ${lumenUser.username}.
     `;
 
     var newMessage = document.createElement('p');
