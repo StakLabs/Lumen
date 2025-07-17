@@ -83,6 +83,7 @@ async function response(userInput) {
         ${localStorage.getItem('yes') ? '' : 'Inform the user that they can hit the brain emoji on the right of the textbox for you to remember something'}
         The user is ${lumenUser.premium ? 'a premium user.' : 'not a premium user'}.
         A premium user can obtain advanced replies and generate images.
+        Lumen Advanced (premium) costs $5 a month.
     `;
     if (localStorage.getItem('yes')) {
         localStorage.setItem('yes', false);
