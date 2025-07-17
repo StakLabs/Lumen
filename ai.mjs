@@ -7,7 +7,11 @@ import OpenAI from 'openai';
 dotenv.config();
 
 const app = express();
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  project: "proj_77Gh1LgUKZgy3yon6dD2QKOg" // <-- force it
+});
+
 
 const models = await openai.models.list();
 models.data
