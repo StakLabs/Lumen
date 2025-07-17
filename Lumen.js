@@ -82,6 +82,7 @@ async function response(userInput) {
         The user chose to have you to remember these inputs from a few chats ago: ${acrossChats}.
         ${localStorage.getItem('yes') ? '' : 'Inform the user that they can hit the brain emoji on the right of the textbox for you to remember something'}
         The user is ${lumenUser.premium ? 'a premium user.' : 'not a premium user'}.
+        A premium user can obtain advanced replies and generate images.
     `;
     if (localStorage.getItem('yes')) {
         localStorage.setItem('yes', false);
