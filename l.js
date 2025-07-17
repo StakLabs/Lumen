@@ -75,7 +75,7 @@ async function signin() {
     document.getElementById('load').classList.add('load');
     // Redirect after a short delay if you want
     // await delay(1000);
-    window.location.href = "https://staklabs.github.io/StakChat/";
+    window.location.href = "https://staklabs.github.io/Lumen/";
 }
 
 function signup(newId) {
