@@ -3,7 +3,7 @@ let previousResponses = [];
 let previousMessages = [];
 
 lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
-if (!lumenUser) window.location.href = 'login.html';
+if (!lumenUser) window.location.href = 'l.html';
 
 document.getElementById('fileUploader').addEventListener('change', function(event) {
     alert('This feature is still in development. Your file will not be sent to Lumen AI. To learn more, you may email us at staklabsofficial@gmail.com');
