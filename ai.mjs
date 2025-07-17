@@ -9,14 +9,8 @@ dotenv.config();
 const app = express();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  project: "proj_77Gh1LgUKZgy3yon6dD2QKOg" // <-- force it
+  project: "proj_77Gh1LgUKZgy3yon6dD2QKOg"
 });
-
-
-const models = await openai.models.list();
-models.data
-  .filter(m => m.id.includes("dall-e"))
-  .forEach(m => console.log(m.id));
 
 app.use(cors({
   origin: ['https://www.timelypro.online', 'http://127.0.0.1:5500', 'https://staklabs.github.io'],
@@ -24,8 +18,17 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Top-level async function to list models (optional)
+async function listModels() {
+  const models = await openai.models.list();
+  models.data
+    .filter(m => m.id.includes("dall-e"))
+    .forEach(m => console.log("Model found:", m.id));
+}
+listModels();
+
 app.post('/ask', async (req, res) => {
-  const { prompt, system, type } = req.body;
+  const { prompt, system, type, model } = req.body;
 
   console.log("📨 Incoming:", { type, prompt });
 
@@ -33,12 +36,10 @@ app.post('/ask', async (req, res) => {
     try {
       const response = await openai.images.generate({
         model: "dall-e-3",
-        prompt: prompt,
+        prompt,
         n: 1,
         size: "1024x1024"
       });
-
-
       const image_url = response.data[0].url;
       console.log("🖼️ Image generated:", image_url);
       return res.json({ image_url });
@@ -50,6 +51,13 @@ app.post('/ask', async (req, res) => {
 
   // fallback: text-based chat using fetch (for full control / headers)
   try {
+    let languageModel;
+    if (model === "Premium") {
+      languageModel = 'gpt-4.1-nano'; // exact model name matters
+    } else {
+      languageModel = 'gpt-3.5-turbo';
+    }
+
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -57,7 +65,7 @@ app.post('/ask', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: languageModel,
         messages: [
           { role: 'system', content: system || "You are a helpful assistant." },
           { role: 'user', content: prompt }
@@ -66,7 +74,7 @@ app.post('/ask', async (req, res) => {
     });
 
     const data = await openaiRes.json();
-    console.log('🧠 Raw AI response:', data);
+    console.log('🧠 aRaw AI response:', data);
     res.json(data);
   } catch (error) {
     console.error('❌ OpenAI fetch failed:', error);
