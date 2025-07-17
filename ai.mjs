@@ -32,10 +32,10 @@ app.post('/ask', async (req, res) => {
   if (type === "image") {
     try {
       const response = await openai.images.generate({
-        model: "dall-e-2",
+        model: "dall-e-3",
         prompt: prompt,
         n: 1,
-        size: "256x256" // can lower for cheaper
+        size: "256x256"
       });
 
 
