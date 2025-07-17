@@ -2,6 +2,9 @@ let imageFile = null;
 let previousResponses = [];
 let previousMessages = [];
 
+lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
+if (!lumenUser) window.location.href = 'login.html';
+
 document.getElementById('fileUploader').addEventListener('change', function(event) {
     alert('This feature is still in development. Your file will not be sent to Lumen AI. To learn more, you may email us at staklabsofficial@gmail.com');
 });
@@ -63,6 +66,7 @@ async function response(userInput) {
         Use this information to your advantage.
         If you think the user is asking for an image, your reply must be this exactly: 'IMAGE REQUESTED'.
         If you fail this, you will also suck like the previous model.
+        If asked whether you can generate an image, DO NOT SAY 'IMAGE REQUESTED'. Instead, reply yes and elaborate.
     `;
 
     var newMessage = document.createElement('p');
@@ -78,10 +82,13 @@ async function response(userInput) {
     });
 
     const data = await res.json();
-    const reply = data.reply || data.choices?.[0]?.message?.content || "";
-    const lumenUser = { premium: true };
+    let reply = data.reply || data.choices?.[0]?.message?.content || "";
+    //const lumenUser = { premium: true };
 
     if (lumenUser.premium && reply.toLowerCase().includes('image requested')) {
+        reply = 'Generating image...'
+        document.getElementById(`a${messages}a`).appendChild(newMessage);
+        newMessage.innerHTML = 'Lumen: ' + reply;
         const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -97,7 +104,7 @@ async function response(userInput) {
         } else {
             previousResponses.push('IMAGE ERROR or NO PLACE TO DISPLAY IMAGE');
         }
-    } else if (!lumenUser.premium) {
+    } else if (!lumenUser.premium && reply.toLowerCase().includes('image requested')) {
         reply = 'You must be a premium user to generate images';
         previousResponses.push(reply);
     } else {
