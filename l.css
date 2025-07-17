@@ -1,0 +1,50 @@
+/* home.css */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  transition: all 0.3s ease;
+}
+
+.all {
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.inputs {
+  width: 80%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.sign-in-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.theme-midnight {
+  background-color: #0d1117;
+  color: #c9d1d9;
+}
+
+.theme-midnight .all {
+  background-color: #161b22;
+}
+
+.theme-midnight .inputs {
+  background-color: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+}
+
+.theme-midnight .sign-in-button {
+  background-color: #238636;
+  color: white;
+}
