@@ -66,7 +66,9 @@ async function response(userInput) {
         Use this information to your advantage.
         If you think the user is asking for an image, your reply must be this exactly: 'IMAGE REQUESTED'.
         If you fail this, you will also suck like the previous model.
-        If asked whether you can generate an image, DO NOT SAY 'IMAGE REQUESTED'. Instead, reply yes and elaborate.
+        If asked whether you can generate an image, DO NOT SAY 'IMAGE REQUESTED'. Instead, reply yes but they have to be a Luem Premium user and elaborate.
+        If asked whether they should buy lumen premium, reply yes and elaborate.
+        If asked what you can do, say you can write code, generate images, and reply to any question and elaborate.
     `;
 
     var newMessage = document.createElement('p');
@@ -134,6 +136,3 @@ function getRandomResponse(responses) {
     const randomIndex = Math.floor(Math.random() * responses.length);
     return responses[randomIndex];
 }
-
-
-
