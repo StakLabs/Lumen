@@ -22,6 +22,7 @@ app.use(express.json());
 async function listModels() {
   const models = await openai.models.list();
   models.data
+    .filter(m => m.id.includes("dall-e"))
     .forEach(m => console.log("Model found:", m.id));
 }
 listModels();
@@ -58,13 +59,13 @@ app.post('/ask', async (req, res) => {
 
     switch (userTier) {
       case 'ultra':
-        languageModel = 'lumen-o3'; // Your branding for GPT-4o
+        languageModel = 'gpt-4o'; // Your branding for GPT-4o
         break;
       case 'premium':
-        languageModel = 'lumen-o3'; // Same as ultra but maybe with limits client side
+        languageModel = 'gpt-4.1-mini'; // Same as ultra but maybe with limits client side
         break;
       default:
-        languageModel = 'lumen-o4-mini'; // Free tier fallback
+        languageModel = 'gpt-3.5-turbo'; // Free tier fallback
     }
 
     // Override model param if provided explicitly (optional)
