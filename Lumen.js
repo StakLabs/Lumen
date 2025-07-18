@@ -47,12 +47,18 @@ async function userMessage() {
             document.querySelector('#userMessageInput').value = '';
             document.querySelector('.title2').innerHTML = '<!--This used to be a title-->';
 
-            if (messages >= 10) {
+            if (messages >= 10 && !lumenUser.premium) {
                 alert("You Have Reached the Session's Message Limit. To Continue, Please Refresh the Page.");
                 return;
             }
 
             messages += 1;
+            const container = document.getElementById('container');
+            container.innerHTML += `
+                <div id="a${messages}"></div>
+                <div id="a${messages}a"></div>
+                <img id="image${messages}" />
+            `;
             document.getElementById(`a${messages}`).appendChild(newMessage);
             response(userInput);
         }
@@ -62,6 +68,7 @@ async function userMessage() {
 }
 
 async function response(userInput) {
+    if (!lumenUser.premium) await delay(3);
     if (userInput.toLowerCase().trim() === "lumen.exe") {
         window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
         return;
@@ -135,7 +142,10 @@ async function response(userInput) {
         reply = 'You must be a premium user to generate images';
         previousResponses.push(reply);
         document.getElementById(`a${messages}a`).appendChild(newMessage);
-        await typeReply(newMessage, 'Lumen: ' + reply);
+        for (let i = 0; i < ('Lumen: ' + reply).length; i++) {
+            newMessage.textContent += ('Lumen: ' + reply).charAt(i);
+            await delay(5);
+        }
     } else {
         previousResponses.push(reply);
         document.getElementById(`a${messages}a`).appendChild(newMessage);
