@@ -12,32 +12,38 @@ const verifypath = /^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\")
 
 //JSON.parse(localStorage.getItem('users'))
 
-let users = [{
-    username: 'Ayaan',
-    email: 'ayaan.khalique3@gmail.com',
-    password: 'sd',
-    premium: true
-}, {
-    username: 'Khalique',
-    email: 'khaliquer@gmail.com',
-    password: 'Oyster@22',
-    premium: true
-}, {
-    username: 'Aasma',
-    email: 'nicezara@gmail.com',
-    password: 'apple',
-    premium: false
-}, {
-    username: 'Babu',
-    email: 'muhammadbashir@gmail.com',
-    password: 'hi',
-    premium: true
-}, {
-    username: 'Emaan',
-    email: 'emaan.khalique@gmail.com',
-    password: 'nothing',
-    premium: true
-}];
+let users = [
+    {
+      username: 'Ayaan',
+      email: 'ayaan.khalique3@gmail.com',
+      password: 'sd',
+      tier: 'ultra'
+    },
+    {
+      username: 'Khalique',
+      email: 'khaliquer@gmail.com',
+      password: 'Oyster@22',
+      tier: 'premium'
+    },
+    {
+      username: 'Aasma',
+      email: 'nicezara@gmail.com',
+      password: 'apple',
+      tier: 'free'
+    },
+    {
+      username: 'Babu',
+      email: 'muhammadbashir@gmail.com',
+      password: 'hi',
+      tier: 'premium'
+    },
+    {
+      username: 'Emaan',
+      email: 'emaan.khalique@gmail.com',
+      password: 'nothing',
+      tier: 'premium'
+   }
+];
 /*
 [{
     username: 'Ayaan',
