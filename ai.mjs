@@ -18,26 +18,30 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Top-level async function to list models (optional)
+// Optional: list available models on startup (for debugging)
 async function listModels() {
   const models = await openai.models.list();
   models.data
-    .filter(m => m.id.includes("dall-e"))
     .forEach(m => console.log("Model found:", m.id));
 }
 listModels();
 
 app.get('/ping', (req, res) => {
-  res.status(200).send('pong'); // or any message you want
+  res.status(200).send('pong');
 });
 
 app.post('/ask', async (req, res) => {
-  const { prompt, system, type, model } = req.body;
+  const { prompt, system, type, model, userTier } = req.body; // userTier added here
 
-  console.log("📨 Incoming:", { type, prompt });
+  console.log("📨 Incoming:", { type, prompt, model, userTier });
 
-  if (type === "image") {
-    try {
+  try {
+    if (type === "image") {
+      // Only allow image gen for premium or ultra users
+      if (userTier !== 'premium' && userTier !== 'ultra') {
+        return res.status(403).json({ error: "Image generation is only for premium users." });
+      }
+
       const response = await openai.images.generate({
         model: "dall-e-3",
         prompt,
@@ -47,21 +51,28 @@ app.post('/ask', async (req, res) => {
       const image_url = response.data[0].url;
       console.log("🖼️ Image generated:", image_url);
       return res.json({ image_url });
-    } catch (err) {
-      console.error("🧨 Image gen failed:", err);
-      return res.status(500).json({ error: "Image generation failed." });
     }
-  }
 
-  // fallback: text-based chat using fetch (for full control / headers)
-  try {
+    // Text chat handling
     let languageModel;
-    if (model === "Premium") {
-      languageModel = 'gpt-4.1-nano'; // exact model name matters
-    } else {
-      languageModel = 'gpt-3.5-turbo';
+
+    switch (userTier) {
+      case 'ultra':
+        languageModel = 'lumen-o3'; // Your branding for GPT-4o
+        break;
+      case 'premium':
+        languageModel = 'lumen-o3'; // Same as ultra but maybe with limits client side
+        break;
+      default:
+        languageModel = 'lumen-o4-mini'; // Free tier fallback
     }
 
+    // Override model param if provided explicitly (optional)
+    if (model) {
+      languageModel = model;
+    }
+
+    // Use official OpenAI chat completions endpoint with correct model
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -78,8 +89,9 @@ app.post('/ask', async (req, res) => {
     });
 
     const data = await openaiRes.json();
-    console.log('🧠 aRaw AI response:', data);
+    console.log('🧠 Raw AI response:', data);
     res.json(data);
+
   } catch (error) {
     console.error('❌ OpenAI fetch failed:', error);
     res.status(500).json({ error: 'Failed to contact OpenAI' });
