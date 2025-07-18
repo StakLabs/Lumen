@@ -6,9 +6,9 @@ const lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
 if (!lumenUser) window.location.href = 'l.html';
 let acrossChats = JSON.parse(localStorage.getItem('across_' + lumenUser.username)) || [];
 
-/*document.getElementById('fileUploader').addEventListener('change', function(event) {
-    alert('This feature is still in development. Your file will not be sent to Lumen AI. To learn more, you may email us at staklabsofficial@gmail.com');
-});*/
+// Define userTier: fallback to 'free' if not set
+const userTier = lumenUser.tier || 'free';
+
 document.querySelector('.brain').addEventListener('click', () => {
     if (confirm('Would you like Lumen to remember this over the next few chats?')) {
         localStorage.setItem('yes', true);
@@ -33,12 +33,12 @@ async function getTime() {
         await delay(10000000);
     }
 }
-
 getTime();
 
 async function userMessage() {
     if (wait == 0) {
-        var userInput = document.querySelector('#userMessageInput').value;
+        const userInput = document.querySelector('#userMessageInput').value;
+        const responseType = document.querySelector('#responseType').name;
         if (userInput) {
             var newMessage = document.createElement('p');
             newMessage.classList.add('userMessage');
@@ -47,7 +47,8 @@ async function userMessage() {
             document.querySelector('#userMessageInput').value = '';
             document.querySelector('.title2').innerHTML = '<!--This used to be a title-->';
 
-            if (messages >= 10 && !lumenUser.premium) {
+            // Message limits for free & premium users
+            if ((messages >= 10 && userTier === 'free') || (messages >= 100 && userTier === 'premium')) {
                 alert("You Have Reached the Session's Message Limit. To Continue, Please Refresh the Page.");
                 return;
             }
@@ -60,41 +61,58 @@ async function userMessage() {
                 <img id="image${messages}" />
             `;
             document.getElementById(`a${messages}`).appendChild(newMessage);
-            response(userInput);
+            response(userInput, responseType);
         }
     } else {
         document.querySelector('#userMessageInput').value = '';
     }
 }
 
-async function response(userInput) {
-    if (!lumenUser.premium) await delay(3);
+async function response(userInput, responseType) {
+    wait = 1;
+    if (userTier === 'free') await delay(3);
     if (userInput.toLowerCase().trim() === "lumen.exe") {
         window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
         return;
     }
     const formattedPreviousMessages = previousMessages.join('\nUser: ');
     const formattedPreviousResponses = previousResponses.join('\nLumen: ');
+
     const systemPrompt = `
-        You are Lumen Re-imagined (or short: Lumen), a copy of an AI that sucked, and your job is to not suck.
-        You were created by Ayaan Khalique, the founder of StakLabs.
-        If you are called ChatGPT or Gemini or something similar, please correct the user that you are Lumen before replying.
-        So far in this conversation the user has said:\nUser: ${formattedPreviousMessages}.
-        You have said:\nLumen: ${formattedPreviousResponses}.
-        You MUST use this information to your advantage and ALWAYS refer to this information.
-        Use some emojis when the modd is right, but NEVER USE THE BRAIN EMOJI.
-        If you think the user is asking for an image, your reply must be this exactly: 'IMAGE REQUESTED'. We will generate the image, you do not have to do anything.
-        If you fail this, you will also suck like the previous model.
-        If asked whether you can generate an image, DO NOT SAY 'IMAGE REQUESTED'. ${ lumenUser.premium ? '' : 'Instead, reply yes but they have to be a Lumen Premium user and elaborate'}.
-        If asked whether they should buy lumen premium, reply yes and elaborate.
-        If asked what you can do, say you can write code, generate images, and reply to any question and elaborate.
-        The user's name is ${lumenUser.username}.
-        The user chose to have you to remember these inputs from a few chats ago: ${acrossChats}.
-        ${localStorage.getItem('yes') ? '' : 'Inform the user that they can hit the brain emoji on the right of the textbox for you to remember something'}
-        The user is ${lumenUser.premium ? 'a premium user.' : 'not a premium user'}.
-        A premium user can obtain advanced replies and generate images.
-        Lumen Advanced (premium) costs $5 a month.
+        You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck.  
+        You were created by Ayaan Khalique, founder of StakLabs.  
+        If someone calls you ChatGPT, Gemini, or anything else, correct them: you are Lumen before replying.  
+
+        So far in this conversation the user has said:  
+        User: ${formattedPreviousMessages}.  
+        You have said:  
+        Lumen: ${formattedPreviousResponses}.  
+
+        You MUST use this info to your advantage and ALWAYS refer to it.  
+
+        Use emojis when the mood is right — but NEVER use the brain emoji.  
+
+        If the user requests an image, reply exactly: 'IMAGE REQUESTED'. We handle image gen separately, you don’t generate images directly.  
+
+        If you fail to do this, you’ll suck like the old model.  
+
+        If asked if you can generate images, reply:  
+        - For premium and ultra users: "Yes, I can generate images for you with your premium access."  
+        - For free users: "Yes, but only Lumen Premium users can generate images. Consider upgrading for this feature."  
+
+        If asked if they should buy Lumen Premium, say yes and elaborate on the advanced features, including unlimited Lumen o3 usage and image generation.  
+
+        If asked what you can do, say:  
+        "I can write code, generate images, and answer any question you have — all powered by Lumen o3, unlimited for premium and ultra users."  
+
+        The user's name is ${lumenUser.username}.  
+        The user chose to have you remember these inputs from previous chats: ${acrossChats}.  
+        The user is ${userTier === 'ultra' ? 'an Ultra user with unlimited Lumen o3 and image gen' : userTier === 'premium' ? 'a Premium user with limited Lumen o3 and image gen access' : 'a free user'}.  
+
+        Premium users get unlimited Lumen o3 access and unlimited image generation.  
+        Lumen Premium costs $5/month; Lumen Ultra (unlimited Lumen o3 + image gen) costs $30/month.  
     `;
+
     if (localStorage.getItem('yes')) {
         localStorage.setItem('yes', false);
         acrossChats.push(userInput);
@@ -106,19 +124,31 @@ async function response(userInput) {
 
     userInput = userInput.toLowerCase();
     previousMessages.push(userInput);
+    let reply = 'Thinking...';
+    document.getElementById(`a${messages}a`).appendChild(newMessage);
+    newMessage.textContent = reply;
+
+    if (responseType == 'long') {
+        await delay(5);
+    } else if (responseType == 'image') {
+        // image type handled below
+    }
+
+    // Model selection logic: use Lumen o3 for ultra and premium, else free model
+    const modelToUse = (userTier === 'ultra' || userTier === 'premium') ? 'lumen-o3' : 'lumen-o4-mini';
 
     const res = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userInput, system: systemPrompt, model: lumenUser.premium ? 'Premium' : 'Free' })
+        body: JSON.stringify({ prompt: userInput, system: systemPrompt, model: modelToUse })
     });
 
     const data = await res.json();
-    let reply = data.reply || data.choices?.[0]?.message?.content || "";
+    reply = data.reply || data.choices?.[0]?.message?.content || "";
 
-    if (lumenUser.premium && reply.toLowerCase().includes('image requested')) {
+    if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
         reply = 'Generating image...';
-        document.getElementById(`a${messages}a`).appendChild(newMessage);
+        document.getElementById(`a${messages}a`).innerText = reply;
 
         const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
             method: 'POST',
@@ -127,18 +157,16 @@ async function response(userInput) {
         });
 
         const imageData = await imageRes.json();
-        const imageTarget = document.getElementById(`image${previousMessages.length}`); 
-        imageTarget.classList.add('lumenMessage');
-        imageTarget.classList.add('img');
-
+        const imageTarget = document.getElementById(`image${previousMessages.length}`);
         if (imageTarget && imageData.image_url) {
             imageTarget.src = imageData.image_url;
+            imageTarget.classList.add('lumenMessage', 'img');
             previousResponses.push(imageData.image_url + ' THE USER REQUESTED AN IMAGE');
         } else {
             previousResponses.push('IMAGE ERROR or NO PLACE TO DISPLAY IMAGE');
         }
 
-    } else if (!lumenUser.premium && reply.toLowerCase().includes('image requested')) {
+    } else if ((userTier !== 'ultra' && userTier !== 'premium') && reply.toLowerCase().includes('image requested')) {
         reply = 'You must be a premium user to generate images';
         previousResponses.push(reply);
         document.getElementById(`a${messages}a`).appendChild(newMessage);
@@ -162,6 +190,7 @@ async function response(userInput) {
 
         // After typing is done, inject actual HTML for code formatting
         newMessage.innerHTML = 'Lumen: ' + formattedReply;
+        wait = 0;
     }
 }
 
@@ -180,7 +209,7 @@ function getRandomResponse(responses) {
 }
 
 function formatBold(message) {
-    return message.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    return message.replace(/\*\*(.*?)\*\*/g, '<strong></strong>');
 }
 
 function formatCodeBlocks(text) {
