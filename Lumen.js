@@ -109,7 +109,8 @@ async function response(userInput, responseType) {
         The user chose to have you remember these inputs from previous chats: ${acrossChats}.  
         The user is ${userTier === 'ultra' ? 'an Ultra user with unlimited Lumen o3 and image gen' : userTier === 'premium' ? 'a Premium user with limited Lumen o3 and image gen access' : 'a free user'}.  
 
-        Premium users get unlimited Lumen o3 access and unlimited image generation.  
+        Ultra users get unlimited Lumen o3 access and unlimited image generation.  
+        Premium users get unlimited Lumen 4.1 access and limited image generation.
         Lumen Premium costs $5/month; Lumen Ultra (unlimited Lumen o3 + image gen) costs $30/month.  
     `;
 
@@ -131,11 +132,48 @@ async function response(userInput, responseType) {
     if (responseType == 'long') {
         await delay(5);
     } else if (responseType == 'image') {
-        // image type handled below
+        if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
+            reply = 'Generating image...';
+            document.getElementById(`a${messages}a`).innerText = reply;
+
+            const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'image', prompt: userInput })
+            });
+
+            const imageData = await imageRes.json();
+            const imageTarget = document.getElementById(`image${previousMessages.length}`);
+            if (imageTarget && imageData.image_url) {
+                imageTarget.src = imageData.image_url;
+                imageTarget.classList.add('lumenMessage', 'img');
+                previousResponses.push(imageData.image_url + ' THE USER REQUESTED AN IMAGE');
+            } else {
+                previousResponses.push('IMAGE ERROR or NO PLACE TO DISPLAY IMAGE');
+            }
+
+        } else if ((userTier !== 'ultra' && userTier !== 'premium') && reply.toLowerCase().includes('image requested')) {
+            reply = 'You must be a premium user to generate images';
+            previousResponses.push(reply);
+            document.getElementById(`a${messages}a`).appendChild(newMessage);
+            for (let i = 0; i < ('Lumen: ' + reply).length; i++) {
+                newMessage.textContent += ('Lumen: ' + reply).charAt(i);
+                await delay(5);
+            }
+        }
+        return;
     }
 
     // Model selection logic: use Lumen o3 for ultra and premium, else free model
-    const modelToUse = (userTier === 'ultra' || userTier === 'premium') ? 'lumen-o3' : 'lumen-o4-mini';
+    var modelToUse = 'gpt-3.5-turbo';
+    switch (userTier) {
+        case 'ultra':
+            modelToUse = 'gpt-4o';
+            break;
+        case 'premium':
+            modelToUse = 'gpt-4.1-mini';
+    }
+    console.log(`🔥 Using model: ${modelToUse} for membership: ${userTier}`);
 
     const res = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
