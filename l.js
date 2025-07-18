@@ -21,7 +21,7 @@ let users = [{
     username: 'Khalique',
     email: 'khaliquer@gmail.com',
     password: 'Oyster@22',
-    premium: false
+    premium: true
 }, {
     username: 'Aasma',
     email: 'nicezara@gmail.com',
