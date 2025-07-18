@@ -27,6 +27,10 @@ async function listModels() {
 }
 listModels();
 
+app.get('/ping', (req, res) => {
+  res.status(200).send('pong'); // or any message you want
+});
+
 app.post('/ask', async (req, res) => {
   const { prompt, system, type, model } = req.body;
 
