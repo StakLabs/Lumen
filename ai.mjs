@@ -68,11 +68,6 @@ app.post('/ask', async (req, res) => {
         languageModel = 'gpt-3.5-turbo'; // Free tier fallback
     }
 
-    // Override model param if provided explicitly (optional)
-    if (model) {
-      languageModel = model;
-    }
-
     // Use official OpenAI chat completions endpoint with correct model
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
