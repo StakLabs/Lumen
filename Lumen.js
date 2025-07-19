@@ -24,15 +24,6 @@ switch (userTier) {
 if (!lumenUser) window.location.href = 'l.html';
 let acrossChats = JSON.parse(localStorage.getItem('across_' + lumenUser.username)) || [];
 
-// Define userTier: fallback to 'free' if not set
-
-document.querySelector('.brain').addEventListener('click', () => {
-    if (confirm('Would you like Lumen to remember this over the next few chats?')) {
-        localStorage.setItem('yes', true);
-        alert('Lumen will now remember this when you send the message');
-    }
-});
-
 var messages = 0;
 var wait = 0;
 var previousResponse = '';
@@ -130,12 +121,8 @@ async function response(userInput) {
         Premium users get unlimited Lumen 4.1 access and limited image generation.
         Lumen Premium costs $5/month; Lumen Ultra (unlimited Lumen o3 + image gen) costs $30/month.  
     `;
-
-    if (localStorage.getItem('yes')) {
-        localStorage.setItem('yes', false);
-        acrossChats.push(userInput);
-        localStorage.setItem('across_' + lumenUser.username, JSON.stringify(acrossChats));
-    }
+    acrossChats.push(userInput);
+    localStorage.setItem('across_' + lumenUser.username, JSON.stringify(acrossChats));
 
     var newMessage = document.createElement('p');
     newMessage.classList.add('lumenMessage');
@@ -161,7 +148,13 @@ async function response(userInput) {
     const res = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userInput, system: systemPrompt, model: modelToUse })
+        bbody: JSON.stringify({ 
+            type: 'chat', // 👈 ADD THIS
+            prompt: userInput,
+            system: systemPrompt,
+            model: modelToUse
+        })
+
     });
 
     const data = await res.json();
@@ -169,12 +162,13 @@ async function response(userInput) {
 
     if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
         reply = 'Generating image...';
+        document.getElementById(`a${messages}a`).appendChild(newMessage);
         document.getElementById(`a${messages}a`).innerText = reply;
 
         const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'image', prompt: userInput })
+            body: JSON.stringify({ type: 'image', prompt: userInput, userTier: userTier })
         });
 
         const imageData = await imageRes.json();
