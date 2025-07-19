@@ -157,3 +157,48 @@ body {
     width: 256px;
     height: 256px;
 }
+#selectedModel {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 10px 30px 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    outline: none;
+    margin-left: 0; /* Changed from 10px to 0 for alignment */
+    font-family: 'Segoe UI', sans-serif;
+    width: 200px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+#selectedModel {
+    background-image: url('data:image/svg+xml;utf8,<svg fill="#ffffff" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+}
+
+#selectedModel:hover {
+    background-color: #444;
+    border-color: #777;
+}
+
+#selectedModel:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
+#selectedModel option {
+    background-color: #333;
+    color: #fff;
+    padding: 10px;
+}
+
+#selectedModel option:hover {
+    background-color: #444;
+}
