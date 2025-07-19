@@ -57,12 +57,12 @@ app.post('/ask', async (req, res) => {
     // Text chat handling
     let languageModel;
 
-    switch (userTier) {
-      case 'ultra':
+    switch (model) {
+      case 'Lumen o3':
         languageModel = 'gpt-4o'; // Your branding for GPT-4o
         break;
-      case 'premium':
-        languageModel = 'gpt-4.1-mini'; // Same as ultra but maybe with limits client side
+      case 'Lumen 4.1':
+        languageModel = 'gpt-4.1-nano'; // Same as ultra but maybe with limits client side
         break;
       default:
         languageModel = 'gpt-3.5-turbo'; // Free tier fallback
