@@ -3,11 +3,28 @@ let previousResponses = [];
 let previousMessages = [];
 
 const lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
+const userTier = lumenUser.tier || 'free';
+
+let selectedModelInput = document.getElementById('selectedModel');
+if (userTier != 'free') {
+    selectedModelInput.innerHTML += `
+        <option name="premium">Lumen 4.1</option>
+    `
+    if (userTier == 'ultra') selectedModelInput.innerHTML += `<option name="ultra">Lumen o3</option>`
+}
+switch (userTier) {
+    case ('ultra'):
+        selectedModelInput.value = 'Lumen o3';
+        break;
+    case ('premium'):
+        selectedModelInput.value = 'Lumen 4.1';
+        break;
+}
+
 if (!lumenUser) window.location.href = 'l.html';
 let acrossChats = JSON.parse(localStorage.getItem('across_' + lumenUser.username)) || [];
 
 // Define userTier: fallback to 'free' if not set
-const userTier = lumenUser.tier || 'free';
 
 document.querySelector('.brain').addEventListener('click', () => {
     if (confirm('Would you like Lumen to remember this over the next few chats?')) {
@@ -38,8 +55,8 @@ getTime();
 async function userMessage() {
     if (wait == 0) {
         const userInput = document.querySelector('#userMessageInput').value;
-        const responseType = document.querySelector('#responseType').name;
         if (userInput) {
+            console.log("Sending input to Lumen:", userInput);
             var newMessage = document.createElement('p');
             newMessage.classList.add('userMessage');
             newMessage.innerText = userInput;
@@ -61,14 +78,14 @@ async function userMessage() {
                 <img id="image${messages}" />
             `;
             document.getElementById(`a${messages}`).appendChild(newMessage);
-            response(userInput, responseType);
+            response(userInput);
         }
     } else {
         document.querySelector('#userMessageInput').value = '';
     }
 }
 
-async function response(userInput, responseType) {
+async function response(userInput) {
     wait = 1;
     if (userTier === 'free') await delay(3);
     if (userInput.toLowerCase().trim() === "lumen.exe") {
@@ -106,8 +123,8 @@ async function response(userInput, responseType) {
         "I can write code, generate images, and answer any question you have — all powered by Lumen o3, unlimited for premium and ultra users."  
 
         The user's name is ${lumenUser.username}.  
-        The user chose to have you remember these inputs from previous chats: ${acrossChats}.  
-        The user is ${userTier === 'ultra' ? 'an Ultra user with unlimited Lumen o3 and image gen' : userTier === 'premium' ? 'a Premium user with limited Lumen o3 and image gen access' : 'a free user'}.  
+        These are the users inputs from previous chats: ${acrossChats}.  
+        The user is ${userTier === 'ultra' ? 'an Ultra user with unlimited Lumen o3 and image gen' : userTier === 'premium' ? 'a Premium user with unlimited Lumen 4.1 and image gen access' : 'a free user'}.  
 
         Ultra users get unlimited Lumen o3 access and unlimited image generation.  
         Premium users get unlimited Lumen 4.1 access and limited image generation.
@@ -129,41 +146,6 @@ async function response(userInput, responseType) {
     document.getElementById(`a${messages}a`).appendChild(newMessage);
     newMessage.textContent = reply;
 
-    if (responseType == 'long') {
-        await delay(5);
-    } else if (responseType == 'image') {
-        if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
-            reply = 'Generating image...';
-            document.getElementById(`a${messages}a`).innerText = reply;
-
-            const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: 'image', prompt: userInput })
-            });
-
-            const imageData = await imageRes.json();
-            const imageTarget = document.getElementById(`image${previousMessages.length}`);
-            if (imageTarget && imageData.image_url) {
-                imageTarget.src = imageData.image_url;
-                imageTarget.classList.add('lumenMessage', 'img');
-                previousResponses.push(imageData.image_url + ' THE USER REQUESTED AN IMAGE');
-            } else {
-                previousResponses.push('IMAGE ERROR or NO PLACE TO DISPLAY IMAGE');
-            }
-
-        } else if ((userTier !== 'ultra' && userTier !== 'premium') && reply.toLowerCase().includes('image requested')) {
-            reply = 'You must be a premium user to generate images';
-            previousResponses.push(reply);
-            document.getElementById(`a${messages}a`).appendChild(newMessage);
-            for (let i = 0; i < ('Lumen: ' + reply).length; i++) {
-                newMessage.textContent += ('Lumen: ' + reply).charAt(i);
-                await delay(5);
-            }
-        }
-        return;
-    }
-
     // Model selection logic: use Lumen o3 for ultra and premium, else free model
     var modelToUse = 'gpt-3.5-turbo';
     switch (userTier) {
@@ -173,8 +155,9 @@ async function response(userInput, responseType) {
         case 'premium':
             modelToUse = 'gpt-4.1-mini';
     }
-    console.log(`🔥 Using model: ${modelToUse} for membership: ${userTier}`);
-
+    if (modelToUse != selectedModelInput.value) modelToUse = selectedModelInput.value;
+    console.log(`${userTier == 'ultra' ? '🔥' : userTier == 'premium' ? '🤑' : ''} Using model: ${modelToUse} for membership: ${userTier}`);
+    console.log("Sending input to Lumen:", userInput);
     const res = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -225,7 +208,7 @@ async function response(userInput, responseType) {
             newMessage.textContent += plainReply.charAt(i);
             await delay(5);
         }
-
+        console.log("Sended input to Lumen:", userInput);
         // After typing is done, inject actual HTML for code formatting
         newMessage.innerHTML = 'Lumen: ' + formattedReply;
         wait = 0;
