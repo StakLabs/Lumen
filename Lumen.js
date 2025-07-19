@@ -1,4 +1,4 @@
-let imageFile = null;
+vlet imageFile = null;
 let previousResponses = [];
 let previousMessages = [];
 
