@@ -43,10 +43,10 @@ app.post('/ask', async (req, res) => {
       }
 
       const response = await openai.images.generate({
-        model: model == 'Lumen o3' ? "dall-e-3" : 'dall-e-2',
+        model: model == 'gpt-4o' ? "dall-e-3" : 'dall-e-2',
         prompt,
         n: 1,
-        size: model == 'Lumen o3' ? "1024x1024" : '256x256',
+        size: model == 'gpt-4o' ? "1024x1024" : '256x256',
       });
       const image_url = response.data[0].url;
       console.log("🖼️ Image generated:", image_url);
