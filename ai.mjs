@@ -46,7 +46,7 @@ app.post('/ask', async (req, res) => {
         model: model == 'Lumen o3' ? "dall-e-3" : 'dall-e-2',
         prompt,
         n: 1,
-        size: "1024x1024"
+        size: model == 'Lumen o3' ? "1024x1024" : '256x256',
       });
       const image_url = response.data[0].url;
       console.log("🖼️ Image generated:", image_url);
