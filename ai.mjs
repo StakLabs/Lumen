@@ -22,7 +22,6 @@ app.use(express.json());
 async function listModels() {
   const models = await openai.models.list();
   models.data
-    .filter(m => m.id.includes("dall-e"))
     .forEach(m => console.log("Model found:", m.id));
 }
 listModels();
@@ -93,5 +92,20 @@ app.post('/ask', async (req, res) => {
     res.status(500).json({ error: 'Failed to contact OpenAI' });
   }
 });
+
+const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
+const PING_INTERVAL = 1000 * 60 * 10; // 10 minutes
+
+function keepLumenAlive() {
+  fetch(LUMEN_PING_URL)
+    .then(res => {
+      if (res.ok) console.log('[🌞] Lumen still vibin.');
+      else console.warn('[😬] Weird response:', res.status);
+    })
+    .catch(err => console.error('[💤] Lumen may be snoozin:', err));
+}
+
+keepLumenAlive(); // instant ping
+setInterval(keepLumenAlive, PING_INTERVAL); // repeat every 10 mins
 
 app.listen(3000, () => console.log('🔥 AI server is lit on port 3000'));
