@@ -35,7 +35,7 @@ let users = [
       username: 'Babu',
       email: 'muhammadbashir@gmail.com',
       password: 'hi',
-      tier: 'premium'
+      tier: 'ultra'
     },
     {
       username: 'Emaan',
