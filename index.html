@@ -12,12 +12,9 @@
             <h1>Type a Message</h1>
         </div>  
         <div class="input-box-container">
-            <div class="brain">🧠</div>
             <input type="text" placeholder="Type a message..." id="userMessageInput" onkeydown="if (event.key === 'Enter') userMessage();">
-            <select id="responseType">
-                <option name="normal">Normal</option>
-                <option name="long">Think for longer</option>
-                <option name="image">Generate an image</option>
+            <select id="selectedModel">
+                <option name="free">Lumen 3.5</option>
             </select>
         </div>        
         <br>
