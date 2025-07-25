@@ -10,13 +10,13 @@
         <div class="title2">
             <br class="br">
             <h1>Type a Message</h1>
-        </div>  
+        </div>
         <div class="input-box-container">
             <input type="text" placeholder="Type a message..." id="userMessageInput" onkeydown="if (event.key === 'Enter') userMessage();">
-            <select id="selectedModel">
+            <button id="sendMessageButton" onclick="userMessage()">Send</button> <select id="selectedModel">
                 <option name="free">Lumen 3.5</option>
             </select>
-        </div>        
+        </div>
         <br>
         <br>
         <div id="container"></div>
