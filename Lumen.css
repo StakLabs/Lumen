@@ -63,11 +63,12 @@ body {
     border: 1px solid #444;
     border-radius: 12px;
     padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: grid; /* Changed to grid */
+    grid-template-columns: 1fr auto auto; /* Input takes most space, then button, then select */
+    gap: 10px; /* Gap between grid items */
     box-shadow: 0 0 20px rgba(0,0,0,0.6);
     z-index: 99;
+    align-items: center; /* Vertically align items */
 }
 
 #userMessageInput {
@@ -81,6 +82,29 @@ body {
     font-size: 16px;
     outline: none;
 }
+
+#sendMessageButton {
+    background-color: #007bff; /* Blue send button */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+#sendMessageButton:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    transform: translateY(-1px); /* Slight lift on hover */
+}
+
+#sendMessageButton:active {
+    background-color: #004085; /* Even darker blue on click */
+    transform: translateY(0); /* Return to original position on click */
+}
+
 
 #fileUploader {
     padding: 6px 10px;
@@ -117,17 +141,33 @@ body {
 @media screen and (max-width: 768px) {
     .input-box-container {
         width: 90%;
+        grid-template-columns: 1fr auto; /* Adjust for smaller screens: input and button/select stacked */
+        grid-template-rows: auto auto; /* Two rows for input and button/select */
     }
+    #userMessageInput {
+        grid-column: 1 / -1; /* Input spans all columns */
+    }
+    #sendMessageButton, #selectedModel {
+        grid-row: 2; /* Move button and select to the second row */
+    }
+    #sendMessageButton {
+        grid-column: 1; /* Button in the first column of the second row */
+    }
+    #selectedModel {
+        grid-column: 2; /* Select in the second column of the second row */
+    }
+
     .userMessage, .lumenMessage {
         max-width: 90%;
         font-size: 15px;
     }
 }
+
 .lumenImage {
-  max-width: 100%;
-  margin-top: 10px;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    max-width: 100%;
+    margin-top: 10px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(255,255,255,0.1);
 }
 .lumenmessage::after {
     content: '|';
@@ -169,9 +209,9 @@ body {
     font-size: 16px;
     cursor: pointer;
     outline: none;
-    margin-left: 0; /* Changed from 10px to 0 for alignment */
+    /* margin-left: 0; This was removed as grid handles spacing */
     font-family: 'Segoe UI', sans-serif;
-    width: 200px;
+    width: auto; /* Changed from 200px to auto to fit grid */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;
 }
