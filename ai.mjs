@@ -5,11 +5,15 @@ import fs from 'fs';
 import path from 'path';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['https://www.timelypro.online', 'http://127.0.0.1:5500', 'https://staklabs.github.io'],
+  methods: ['GET', 'POST']
+}));
 app.use(express.json());
 app.use(fileUpload());
 
@@ -18,18 +22,43 @@ const openai = new OpenAI({
 });
 
 app.post('/ask', async (req, res) => {
+  const { prompt, system, type, model, userTier, file } = req.body;
+
   try {
-    const userInput = req.body.input;
+    if (type === 'image') {
+      if (userTier !== 'premium' && userTier !== 'ultra') {
+        return res.status(403).json({ error: "Image generation is only for premium users." });
+      }
+
+      const dalleModel = model === 'Lumen o3' ? "dall-e-3" : "dall-e-2";
+      const dalleSize = model === 'Lumen o3' ? "1024x1024" : "512x512";
+
+      const response = await openai.images.generate({
+        model: dalleModel,
+        prompt,
+        n: 1,
+        size: dalleSize,
+      });
+
+      return res.json(response);
+    }
+
+    // Build messages array
+    const messages = [
+      { role: "system", content: system },
+      file ? { role: "user", content: prompt, file_ids: [file] } : { role: "user", content: prompt }
+    ];
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: userInput }]
+      model,
+      messages
     });
 
-    const response = completion.choices[0].message.content;
-    res.json({ response });
-  } catch (err) {
-    console.error('❌ /ask error:', err);
-    res.status(500).json({ error: err.message });
+    res.json({ reply: completion.choices?.[0]?.message?.content || "No reply" });
+
+  } catch (error) {
+    console.error('❌ OpenAI request failed:', error);
+    res.status(500).json({ error: 'Failed to contact OpenAI', detail: error.message });
   }
 });
 
@@ -67,6 +96,13 @@ app.post('/upload', async (req, res) => {
   }
 });
 
+const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
+setInterval(() => {
+  fetch(LUMEN_PING_URL)
+    .then(() => console.log('🔁 Keeping Lumen alive'))
+    .catch(err => console.error('💀 Keep-alive ping failed:', err.message));
+}, 5 * 60 * 1000);
+
 app.listen(3000, () => {
-  console.log('Lumen AI server running on :3000');
-});//
+  console.log('🔥 AI server lit on port 3000');
+});
