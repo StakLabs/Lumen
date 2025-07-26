@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 import OpenAI from 'openai';
 import fileUpload from 'express-fileupload';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
 
@@ -53,16 +55,22 @@ app.post('/ask', async (req, res) => {
       return res.json(response);
     }
 
-    // 🆕 Inject file into messages if present
+    // Chat completion (w/ optional file)
     const messages = [
       { role: "system", content: system },
-      file ? { role: "user", content: prompt, file_ids: [file] } : { role: "user", content: prompt }
+      { role: "user", content: prompt }
     ];
 
-    const completion = await openai.chat.completions.create({
+    const payload = {
       model,
       messages
-    });
+    };
+
+    if (file) {
+      payload.file_ids = [file]; // Correct place for file IDs
+    }
+
+    const completion = await openai.chat.completions.create(payload);
 
     res.json({ reply: completion.choices?.[0]?.message?.content || "No reply" });
 
@@ -73,8 +81,6 @@ app.post('/ask', async (req, res) => {
 });
 
 // 📁 Upload file to OpenAI
-import { Readable } from 'stream';
-
 app.post('/upload', async (req, res) => {
   try {
     const file = req.files?.file;
@@ -82,13 +88,20 @@ app.post('/upload', async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded.' });
     }
 
-    const stream = Readable.from(file.data);
+    if (file.size > 100 * 1024 * 1024) {
+      return res.status(400).json({ error: "Max file size is 100MB." });
+    }
+
+    const tempPath = path.join('/tmp', file.name);
+    await fs.promises.writeFile(tempPath, file.data);
 
     const upload = await openai.files.create({
-      file: stream,
+      file: fs.createReadStream(tempPath),
       filename: file.name,
       purpose: 'assistants'
     });
+
+    await fs.promises.unlink(tempPath);
 
     console.log('📁 File uploaded:', upload.id);
     res.json({ success: true, file: upload });
