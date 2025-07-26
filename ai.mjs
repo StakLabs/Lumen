@@ -27,6 +27,9 @@ app.get('/ping', (req, res) => {
   res.status(200).send('pong');
 });
 
+import fs from 'fs/promises';
+import path from 'path';
+
 app.post('/upload', async (req, res) => {
   try {
     if (!req.files || !req.files.file) {
@@ -34,18 +37,23 @@ app.post('/upload', async (req, res) => {
     }
 
     const file = req.files.file;
+    const tempPath = path.join('/tmp', `${Date.now()}-${file.name}`);
 
-    // Create a readable stream from the file buffer
-    const stream = Readable.from(file.data);
+    // Write buffer to temp file
+    await fs.writeFile(tempPath, file.data);
 
+    // Pass file path string to OpenAI SDK
     const upload = await openai.files.create({
-      file: stream,
-      filename: file.name,
-      purpose: 'assistants' // or 'fine-tune' if you want
+      file: tempPath,
+      purpose: 'assistants'
     });
+
+    // Cleanup temp file
+    await fs.unlink(tempPath);
 
     console.log('📁 File uploaded:', upload.id);
     res.json({ success: true, file: upload });
+
   } catch (error) {
     console.error('❌ File upload failed:', error);
     res.status(500).json({ success: false, error: error.message });
