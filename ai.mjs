@@ -73,6 +73,8 @@ app.post('/ask', async (req, res) => {
 });
 
 // 📁 Upload file to OpenAI
+import { Readable } from 'stream';
+
 app.post('/upload', async (req, res) => {
   try {
     const file = req.files?.file;
@@ -80,9 +82,12 @@ app.post('/upload', async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded.' });
     }
 
+    const stream = Readable.from(file.data);
+
     const upload = await openai.files.create({
-      file: file.data,
-      purpose: 'assistants' // Or 'fine-tune' depending on use
+      file: stream,
+      filename: file.name,
+      purpose: 'assistants'
     });
 
     console.log('📁 File uploaded:', upload.id);
