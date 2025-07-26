@@ -80,7 +80,7 @@ app.post('/ask', async (req, res) => {
   }
 });
 
-// 📁 Upload file to OpenAI
+// 📁 Upload file to OpenAI (with try-catch around openai.files.create)
 app.post('/upload', async (req, res) => {
   try {
     const file = req.files?.file;
@@ -95,21 +95,35 @@ app.post('/upload', async (req, res) => {
     const tempPath = path.join('/tmp', file.name);
     await fs.promises.writeFile(tempPath, file.data);
 
-    const upload = await openai.files.create({
-      file: fs.createReadStream(tempPath),
-      filename: file.name,
-      purpose: 'assistants'
-    });
+    let upload;
 
-    await fs.promises.unlink(tempPath);
+    try {
+      upload = await openai.files.create({
+        file: fs.createReadStream(tempPath),
+        filename: file.name,
+        purpose: 'assistants'
+      });
+    } catch (err) {
+      console.error('❌ Error during file upload to OpenAI:', err);
+      return res.status(500).json({ success: false, error: 'Upload to OpenAI failed', detail: err.message });
+    }
 
-    console.log('📁 File uploaded:', upload.id);
+    // Clean up
+    try {
+      await fs.promises.unlink(tempPath);
+    } catch (err) {
+      console.warn('⚠️ Could not delete temp file:', err.message);
+    }
+
+    console.log('✅ File uploaded to OpenAI:', upload.id);
     res.json({ success: true, file: upload });
-  } catch (error) {
-    console.error('❌ File upload failed:', error);
-    res.status(500).json({ success: false, error: error.message });
+
+  } catch (outerErr) {
+    console.error('🔥 Outer /upload error:', outerErr);
+    res.status(500).json({ success: false, error: 'Unexpected server error', detail: outerErr.message });
   }
 });
+
 
 // 🌞 Keep Render app awake
 const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
@@ -128,4 +142,4 @@ keepLumenAlive();
 setInterval(keepLumenAlive, PING_INTERVAL);
 
 // 🚀 Start server
-app.listen(3000, () => console.log('🔥 AI server is lit on port 3000'));//
+app.listen(3000, () => console.log('🔥 AI server is lit on port 3000'));
