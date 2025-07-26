@@ -36,10 +36,10 @@ const PING_INTERVAL = 1000 * 60 * 10;
 function keepLumenAlive() {
     fetch(LUMEN_PING_URL)
         .then(res => {
-            if (res.ok) console.log('[🌞] Lumen still vibin.');
-            else console.warn('[😬] Weird response:', res.status);
+            if (res.ok) console.log('[捲] Lumen still vibin.');
+            else console.warn('[豫] Weird response:', res.status);
         })
-        .catch(err => console.error('[💤] Lumen may be snoozin:', err));
+        .catch(err => console.error('[彫] Lumen may be snoozin:', err));
 }
 keepLumenAlive();
 setInterval(keepLumenAlive, PING_INTERVAL);
@@ -53,7 +53,7 @@ function findModel(modelName) {
 app.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    console.log('📁 File uploaded:', fileUrl);
+    console.log('刀 File uploaded:', fileUrl);
     res.json({ success: true, url: fileUrl });
 });
 
@@ -82,6 +82,7 @@ app.post('/ask', async (req, res) => {
         const chatModel = findModel(model);
 
         let messages = [{ role: 'system', content: system }];
+        let userMessageContent;
 
         if (fileUrl) {
             const lowerUrl = fileUrl.toLowerCase();
@@ -92,14 +93,10 @@ app.post('/ask', async (req, res) => {
                 if (chatModel !== 'gpt-4o') {
                     return res.status(400).json({ error: 'Image analysis requires Lumen o3 (gpt-4o).' });
                 }
-                messages.push({
-                    type: 'image_url',
-                    image_url: { url: fileUrl }
-                });
-                messages.push({
-                    role: 'user',
-                    content: prompt || 'Describe this image.'
-                });
+                userMessageContent = [
+                    { type: 'text', text: prompt || 'Describe this image.' },
+                    { type: 'image_url', image_url: { url: fileUrl } }
+                ];
             } else if (isText) {
                 let fileText = '';
                 try {
@@ -108,19 +105,14 @@ app.post('/ask', async (req, res) => {
                 } catch (e) {
                     return res.status(500).json({ error: 'Failed to fetch file content.' });
                 }
-                messages.push({
-                    role: 'user',
-                    content: `${prompt}\n\n----- FILE CONTENT -----\n${fileText}`
-                });
+                userMessageContent = `${prompt}\n\n----- FILE CONTENT -----\n${fileText}`;
             } else {
-                messages.push({
-                    role: 'user',
-                    content: prompt || 'File uploaded but unsupported file type for analysis.'
-                });
+                userMessageContent = prompt || 'File uploaded but unsupported file type for analysis.';
             }
         } else {
-            messages.push({ role: 'user', content: prompt });
+            userMessageContent = prompt;
         }
+        messages.push({ role: 'user', content: userMessageContent });
 
         const completion = await openai.chat.completions.create({
             model: chatModel,
@@ -129,7 +121,7 @@ app.post('/ask', async (req, res) => {
 
         res.json({ response: completion.choices[0].message.content });
     } catch (error) {
-        console.error('❌ /ask failed:', error);
+        console.error('笶/ask failed:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -139,5 +131,5 @@ app.get('/ping', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🔥 AI server is lit on port ${PORT}`);
+    console.log(`櫨 AI server is lit on port ${PORT}`);
 });
