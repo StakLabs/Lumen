@@ -31,6 +31,7 @@ app.use(cors({
 app.use(fileUpload());
 app.use(express.json());
 
+// Content-type enforcement
 app.use((req, res, next) => {
     const contentType = req.headers['content-type'] || '';
     if (
@@ -52,9 +53,10 @@ app.post('/upload', async (req, res) => {
         }
 
         const file = req.files.file;
-        const tempPath = path.join(__dirname, 'tmp', `${Date.now()}-${file.name}`);
+        const tempDir = path.join(__dirname, 'tmp');
+        await fs.mkdir(tempDir, { recursive: true });
 
-        await fs.mkdir(path.join(__dirname, 'tmp'), { recursive: true });
+        const tempPath = path.join(tempDir, `${Date.now()}-${file.name}`);
         await fs.writeFile(tempPath, file.data);
 
         const fileStream = fsSync.createReadStream(tempPath);
@@ -97,11 +99,14 @@ app.post('/ask', async (req, res) => {
             return res.json(response);
         }
 
+        // Map model
         const gptModel = findModel(model);
+
+        // Compose messages for chat
         const messages = [
             { role: "system", content: system },
             file
-                ? { role: "user", content: prompt, file_ids: [file] }
+                ? { role: "user", content: prompt, file_ids: [file] }  // Note: OpenAI Chat API does not accept file_ids here; this may need Assistants API usage
                 : { role: "user", content: prompt }
         ];
 
