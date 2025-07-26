@@ -31,8 +31,8 @@ app.get('/ping', (req, res) => {
 
 // 🧠 Ask endpoint (chat + image generation)
 app.post('/ask', async (req, res) => {
-  const { prompt, system, type, model, userTier } = req.body;
-  console.log("📨 Incoming:", { type, prompt, model, userTier });
+  const { prompt, system, type, model, userTier, file } = req.body;
+  console.log("📨 Incoming:", { type, prompt, model, userTier, file });
 
   try {
     if (type === 'image') {
@@ -53,16 +53,19 @@ app.post('/ask', async (req, res) => {
       return res.json(response);
     }
 
-    // Chat completion
+    // 🆕 Inject file into messages if present
+    const messages = [
+      { role: "system", content: system },
+      file ? { role: "user", content: prompt, file_ids: [file] } : { role: "user", content: prompt }
+    ];
+
     const completion = await openai.chat.completions.create({
       model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt }
-      ]
+      messages
     });
 
     res.json({ reply: completion.choices?.[0]?.message?.content || "No reply" });
+
   } catch (error) {
     console.error('❌ OpenAI fetch failed:', error);
     res.status(500).json({ error: 'Failed to contact OpenAI' });
