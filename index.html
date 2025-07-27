@@ -13,7 +13,10 @@
         </div>
         <div class="input-box-container">
             <input type="text" placeholder="Type a message..." id="userMessageInput" onkeydown="if (event.key === 'Enter') userMessage();">
-            <button id="sendMessageButton" onclick="userMessage()">Send</button> <select id="selectedModel">
+            <button id="sendMessageButton" onclick="userMessage()">Send</button>
+            <input type="file" id="fileInput" hidden />
+            <button id="fileButton">Upload</button>
+            <select id="selectedModel">
                 <option name="free">Lumen 3.5</option>
             </select>
         </div>
@@ -29,4 +32,4 @@
         <br>
         <script src="Lumen.js"></script>
     </body>
-</html>
+</html>s
