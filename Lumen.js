@@ -1,4 +1,4 @@
-let imageFile = null; 
+let imageFile = null;
 let previousResponses = [];
 let previousMessages = [];
 
@@ -103,7 +103,7 @@ async function userMessage() {
             wait = 0;
             return;
         }
-        fileRef = data.file?.id;
+        fileRef = data.url;
     }
 
     const formattedPreviousMessages = previousMessages.join('\nUser: ');
@@ -153,13 +153,40 @@ async function userMessage() {
     });
 
     const responseData = await res.json();
-    let reply = responseData.reply || responseData.choices?.[0]?.message?.content || '';
+    let reply = responseData.response || responseData.reply || responseData.choices?.[0]?.message?.content || '';
 
     previousResponses.push(reply);
     replyEl.textContent = 'Lumen: ';
     for (let i = 0; i < reply.length; i++) {
         replyEl.textContent += reply.charAt(i);
         await delay(5);
+    }
+
+    if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
+        replyEl.textContent = 'Generating image...';
+
+        const imagePayload = {
+            type: 'image',
+            prompt: userInput,
+            userTier: userTier,
+            model: selectedModelInput.value
+        };
+
+        const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(imagePayload)
+        });
+
+        const imageData = await imageRes.json();
+        const imageTarget = document.getElementById(`image${messages}`);
+        if (imageTarget && imageData.data?.[0]?.url) {
+            imageTarget.src = imageData.data[0].url;
+            imageTarget.classList.add('lumenMessage', 'img');
+            previousResponses.push(imageData.data[0].url + ' [IMAGE GENERATED]');
+        } else {
+            previousResponses.push('IMAGE ERROR: could not generate or display');
+        }
     }
 
     replyEl.innerHTML = 'Lumen: ' + reply;
@@ -170,7 +197,7 @@ async function userMessage() {
 
 async function response(userInput) {
     wait = 1;
-    if (userTier === 'free') await delay(3);
+    if (userTier === 'free') await delay(3000);
 
     if (userInput.toLowerCase().trim() === "lumen.exe") {
         window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
@@ -228,7 +255,7 @@ async function response(userInput) {
     });
 
     const data = await res.json();
-    let reply = data.reply || data.choices?.[0]?.message?.content || '';
+    let reply = data.response || data.reply || data.choices?.[0]?.message?.content || '';
 
     if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
         newMessage.textContent = 'Generating image...';
@@ -270,24 +297,4 @@ async function response(userInput) {
 
 function delay(ms) {
     return new Promise(res => setTimeout(res, ms));
-}
-
-async function uploadFile() {
-    const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
-    if (file.size > 100 * 1024 * 1024) {
-        alert("File too large! Max is 100MB.");
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch("https://lumen-ai.onrender.com/upload", {
-      method: "POST",
-      body: formData
-    });
-
-    const data = await res.json();
-    response(`REPEAT AFTER ME, YOUR RESPONSE SHOULD BE EXACTLY WHAT I SAY: ${data}`);
 }
