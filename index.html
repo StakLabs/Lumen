@@ -6,15 +6,15 @@
     <link rel="stylesheet" href="Lumen.css">
 </head>
 <body>
-    <p style="text-align: center;">Version 2.2.1</p>
+    <p style="text-align: center;">Version 2.2.3</p>
     <h1 class="title">Lumen</h1>
     <div class="subtitle">Simply Bright</div>
     <div class="title2">
         <br class="br" />
-        <h1>Type a Message</h1>
+        <h1 id="thing"></h1>
     </div>
     <div class="input-box-container">
-        <input type="text" placeholder="Type a message..." id="userMessageInput" onkeydown="if(event.key==='Enter') userMessage()" autocomplete="off" />
+        <input type="text" placeholder="Ask Anything..." id="userMessageInput" onkeydown="if(event.key==='Enter') userMessage()" autocomplete="off" />
         <button id="sendMessageButton" onclick="userMessage()">Send</button>
         <input type="file" id="fileInput" hidden />
         <button id="fileButton">Upload</button>
@@ -28,10 +28,35 @@
     <br /><br /><br /><br /><br /><br /><br />
     <script src="Lumen.js"></script>
     <script>
-        const voiceBtn = document.getElementById('voiceToggleButton');
-        const inputField = document.getElementById('userMessageInput');
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
+        function thing() {
+            let thing = '';
+            let r = Math.floor(Math.random() * 100);
+            if (r < 10) {
+                thing = `How can I assist you today, ${lumenUser.username}?`;
+            } else if (r < 20) {
+                thing = 'What would you like to know?';
+            } else if (r < 30) {
+                thing = 'Ready when you are!';
+            } else if (r < 40) {
+                thing = 'What can I do for you?';
+            } else if (r < 50) {
+                thing = `How can I help?`;
+            } else if (r < 60) {
+                thing = `Hey, ${lumenUser.username}. Ready to dive in?`
+            } else if (r < 70) {
+                thing = 'Where should we begin?';
+            } else if (r < 80) {
+                thing = `What's on your mind today?`;
+            } else if (r < 90) {
+                thing = `Good to see you, ${lumenUser.username}`;
+            } else {
+                thing = `What's on the agenda today?`;
+            }
+            document.getElementById('thing').innerText = thing;
+        }
+        thing();
+    </script>
+    <script>
         if (!SpeechRecognition) {
             voiceBtn.disabled = true;
             voiceBtn.innerText = "🎙️ Voice Not Supported";
