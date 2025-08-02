@@ -1,35 +1,94 @@
 <!DOCTYPE html>
 <html>
+<head>
     <title>Lumen - Simply Bright</title>
     <link rel="icon" type="image/x-icon" href="logo-lumen.png">
-    <body>
-        <link rel="stylesheet" href="Lumen.css"></style>
-        <p style="text-align: center;">Version 2.0.0</p>
-        <h1 class="title">Lumen</h1>
-        <div class="subtitle">Simply Bright</div>
-        <div class="title2">
-            <br class="br">
-            <h1>Type a Message</h1>
-        </div>
-        <div class="input-box-container">
-            <input type="text" placeholder="Type a message..." id="userMessageInput" onkeydown="if (event.key === 'Enter') userMessage();">
-            <button id="sendMessageButton" onclick="userMessage()">Send</button>
-            <input type="file" id="fileInput" hidden />
-            <button id="fileButton">Upload</button>
-            <select id="selectedModel">
-                <option name="free">Lumen 3.5</option>
-            </select>
-        </div>
-        <br>
-        <br>
-        <div id="container"></div>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <script src="Lumen.js"></script>
-    </body>
+    <link rel="stylesheet" href="Lumen.css">
+</head>
+<body>
+    <p style="text-align: center;">Version 2.2.1</p>
+    <h1 class="title">Lumen</h1>
+    <div class="subtitle">Simply Bright</div>
+    <div class="title2">
+        <br class="br" />
+        <h1>Type a Message</h1>
+    </div>
+    <div class="input-box-container">
+        <input type="text" placeholder="Type a message..." id="userMessageInput" onkeydown="if(event.key==='Enter') userMessage()" autocomplete="off" />
+        <button id="sendMessageButton" onclick="userMessage()">Send</button>
+        <input type="file" id="fileInput" hidden />
+        <button id="fileButton">Upload</button>
+        <button id="voiceToggleButton">🎙️ Start Voice Mode</button>
+        <select id="selectedModel">
+            <option name="free">Lumen 3.5</option>
+        </select>
+    </div>
+    <br /><br />
+    <div id="container"></div>
+    <br /><br /><br /><br /><br /><br /><br />
+    <script src="Lumen.js"></script>
+    <script>
+        const voiceBtn = document.getElementById('voiceToggleButton');
+        const inputField = document.getElementById('userMessageInput');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            voiceBtn.disabled = true;
+            voiceBtn.innerText = "🎙️ Voice Not Supported";
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            let listening = false;
+            let speechMode = false;
+
+            function startListening() {
+                try {
+                    recognition.start();
+                    listening = true;
+                    showStatus('listening');
+                } catch (e) {
+                    console.error("Recognition start error:", e);
+                }
+            }
+
+            recognition.onresult = (e) => {
+                const transcript = e.results[0][0].transcript;
+                inputField.value = transcript;
+                userMessage();
+            };
+
+            recognition.onerror = (e) => {
+                console.error("Recognition error:", e.error);
+                speak("Sorry, I couldn't hear you. Try again.");
+                showStatus(null);
+                listening = false;
+            };
+
+            recognition.onend = () => {
+                listening = false;
+                if (speechMode) startListening();
+            };
+
+            voiceBtn.addEventListener('click', () => {
+                if (!speechMode) {
+                    speechMode = true;
+                    voiceBtn.innerText = '🔇 Stop Voice Mode';
+                    inputField.disabled = true;
+                    inputField.placeholder = '🎤 Listening...';
+                    startListening();
+                } else {
+                    speechMode = false;
+                    voiceBtn.innerText = '🎙️ Start Voice Mode';
+                    inputField.disabled = false;
+                    inputField.placeholder = 'Type a message...';
+                    recognition.stop();
+                    listening = false;
+                    showStatus(null);
+                }
+            });
+        }
+    </script>
+</body>
 </html>
