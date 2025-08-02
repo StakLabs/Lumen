@@ -1,7 +1,9 @@
 const speak = async (text) => {
-    if (!speechMode) return;  // Speak ONLY if voice mode is active
+    if (!speechMode) return;
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    let spokenText = text.replace(/<br><br>/g, '.\n\n').replace(/<br>/g, '.\n');
+
+    const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.rate = 1.5;
     showStatus('replying');
     speechSynthesis.speak(utterance);
@@ -177,18 +179,36 @@ async function userMessage() {
         You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck.  
         You were created by Ayaan Khalique, founder of StakLabs.  
         If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen.
+        HOWEVER, if they ask who ChatGPT or Gemini is, you can explain they are other AI models.
+
+        All formatting MUST be done using HTML.
+        Use <br> for line breaks and <br><br> for new paragraphs.
+        DO NOT use \\n or \\n\\n. Only use <br> and <br><br>.
+        If you skip this, your output will be invalid.
 
         User said: ${formattedPreviousMessages}.  
         You said: ${formattedPreviousResponses}.  
+        You MUST USE PREVIOUS MESSAGES TO FORM YOUR REPLY, but NEVER DIRECTLY SAY THEM unless ASKED FOR.
+        NEVER SAY SOMETHING LIKE "User said: " or "You said: " in your reply.
 
         Use emojis when the vibe fits — NEVER use the brain emoji.  
 
-        For image requests, reply exactly: 'IMAGE REQUESTED'.  
+        For image requests, reply exactly: 'IMAGE REQUESTED'.
 
-        If asked what you can do:  
-        "I can write code, generate images, and answer anything — powered by Lumen o3, unlimited for premium and ultra users."
+        You can write code, generate images, and answer anything.
 
-        User: ${lumenUser.username}, Tier: ${userTier}
+        ALWAYS reply properly and reply based on the topic of the conversation.
+
+        You are not allowed to say: ${formattedPreviousMessages}
+        NEVER say: ${formattedPreviousMessages}
+
+        If the person has repeated something more than 3 times, ask them why.
+
+        NEVER insult the user in any way.
+
+        User: ${lumenUser.username}, Tier: ${userTier}.
+        Do NOT let them know what tier they have unless specifically asked for.
+        Do NOT reply something not related to the current topic.
     `;
 
     const payload = {
@@ -202,7 +222,7 @@ async function userMessage() {
 
     const replyEl = document.createElement('p');
     replyEl.classList.add('lumenMessage');
-    replyEl.textContent = 'Thinking...';
+    replyEl.innerHTML = 'Thinking...';
     document.getElementById(`a${messages}a`).appendChild(replyEl);
 
     const res = await fetch('https://lumen-ai.onrender.com/ask', {
@@ -214,17 +234,25 @@ async function userMessage() {
     const responseData = await res.json();
     let reply = responseData.response || responseData.reply || responseData.choices?.[0]?.message?.content || '';
 
+    // Normalize and convert newlines to <br> for rendering
+    reply = reply
+        .replace(/\r\n/g, '\n')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+
     previousResponses.push(reply);
-    replyEl.textContent = 'Lumen: ';
+
+    replyEl.innerHTML = 'Lumen: ';
     for (let i = 0; i < reply.length; i++) {
-        replyEl.textContent += reply.charAt(i);
+        replyEl.innerHTML += reply.charAt(i);
         await delay(5);
     }
+    replyEl.innerHTML = 'Lumen: ' + reply;
 
     speak(reply);
 
     if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
-        replyEl.textContent = 'Generating image...';
+        replyEl.innerHTML = 'Generating image...';
 
         const imagePayload = {
             type: 'image',
@@ -250,7 +278,6 @@ async function userMessage() {
         }
     }
 
-    replyEl.innerHTML = 'Lumen: ' + reply;
     wait = 0;
     fileInput.value = '';
 }
