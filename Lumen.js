@@ -1,3 +1,62 @@
+const speak = async (text) => {
+    if (!speechMode) return;  // Speak ONLY if voice mode is active
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.5;
+    showStatus('replying');
+    speechSynthesis.speak(utterance);
+    utterance.onend = () => showStatus(null);
+};
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.lang = 'en-US';
+recognition.interimResults = false;
+recognition.maxAlternatives = 1;
+
+let speechMode = false;
+let listening = false;
+
+const voiceBtn = document.getElementById('voiceToggleButton');
+const inputField = document.getElementById('userMessageInput');
+
+voiceBtn.addEventListener('click', () => {
+    speechMode = !speechMode;
+    voiceBtn.innerText = speechMode ? '🔇 Stop Voice Mode' : '🎙️ Start Voice Mode';
+    inputField.disabled = speechMode;
+    inputField.placeholder = speechMode ? '🎤 Listening...' : 'Type a message...';
+
+    if (speechMode) startListening();
+    else recognition.stop();
+});
+
+function startListening() {
+    if (!listening && speechMode) {
+        recognition.start();
+        showStatus('listening');
+        listening = true;
+    }
+}
+
+recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    document.querySelector('#userMessageInput').value = transcript;
+    userMessage();
+};
+
+recognition.onerror = (event) => {
+    speak("Sorry, I couldn't hear you. Try again.");
+    showStatus(null);
+    listening = false;
+};
+
+recognition.onend = () => {
+    listening = false;
+    if (speechMode) {
+        startListening();
+    }
+};
+
 let imageFile = null;
 let previousResponses = [];
 let previousMessages = [];
@@ -162,6 +221,8 @@ async function userMessage() {
         await delay(5);
     }
 
+    speak(reply);
+
     if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
         replyEl.textContent = 'Generating image...';
 
@@ -191,108 +252,7 @@ async function userMessage() {
 
     replyEl.innerHTML = 'Lumen: ' + reply;
     wait = 0;
-
     fileInput.value = '';
-}
-
-async function response(userInput) {
-    wait = 1;
-    if (userTier === 'free') await delay(3000);
-
-    if (userInput.toLowerCase().trim() === "lumen.exe") {
-        window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
-        return;
-    }
-
-    const formattedPreviousMessages = previousMessages.join('\nUser: ');
-    const formattedPreviousResponses = previousResponses.join('\nLumen: ');
-
-    acrossChats.push(userInput);
-    localStorage.setItem('across_' + lumenUser.username, JSON.stringify(acrossChats));
-
-    previousMessages.push(userInput.toLowerCase());
-
-    const modelToUse = selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
-                      : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
-                      : 'gpt-3.5-turbo';
-
-    const containerId = `a${messages}a`;
-    const newMessage = document.createElement('p');
-    newMessage.classList.add('lumenMessage');
-    newMessage.textContent = 'Thinking...';
-    document.getElementById(containerId).appendChild(newMessage);
-
-    const systemPrompt = `
-        You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck.  
-        You were created by Ayaan Khalique, founder of StakLabs.  
-        If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen.
-
-        User said: ${formattedPreviousMessages}.  
-        You said: ${formattedPreviousResponses}.  
-
-        Use emojis when the vibe fits — NEVER use the brain emoji.  
-
-        For image requests, reply exactly: 'IMAGE REQUESTED'.  
-
-        If asked what you can do:  
-        "I can write code, generate images, and answer anything — powered by Lumen o3, unlimited for premium and ultra users."
-
-        User: ${lumenUser.username}, Tier: ${userTier}
-    `;
-
-    const payload = {
-        type: 'chat',
-        prompt: userInput,
-        system: systemPrompt,
-        model: modelToUse,
-        userTier: userTier
-    };
-
-    const res = await fetch('https://lumen-ai.onrender.com/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-    let reply = data.response || data.reply || data.choices?.[0]?.message?.content || '';
-
-    if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
-        newMessage.textContent = 'Generating image...';
-
-        const imagePayload = {
-            type: 'image',
-            prompt: userInput,
-            userTier: userTier,
-            model: selectedModelInput.value
-        };
-
-        const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(imagePayload)
-        });
-
-        const imageData = await imageRes.json();
-        const imageTarget = document.getElementById(`image${previousMessages.length}`);
-        if (imageTarget && imageData.data?.[0]?.url) {
-            imageTarget.src = imageData.data[0].url;
-            imageTarget.classList.add('lumenMessage', 'img');
-            previousResponses.push(imageData.data[0].url + ' [IMAGE GENERATED]');
-        } else {
-            previousResponses.push('IMAGE ERROR: could not generate or display');
-        }
-    } else {
-        previousResponses.push(reply);
-        newMessage.textContent = 'Lumen: ';
-        for (let i = 0; i < reply.length; i++) {
-            newMessage.textContent += reply.charAt(i);
-            await delay(5);
-        }
-    }
-
-    newMessage.innerHTML = 'Lumen: ' + reply;
-    wait = 0;
 }
 
 function delay(ms) {
