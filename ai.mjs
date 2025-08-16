@@ -9,6 +9,7 @@ import fsSync from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fetch from 'node-fetch';
+import e from 'express';
 
 dotenv.config();
 
@@ -36,10 +37,10 @@ const PING_INTERVAL = 1000 * 60 * 10;
 function keepLumenAlive() {
     fetch(LUMEN_PING_URL)
         .then(res => {
-            if (res.ok) console.log('[捲] Lumen still vibin.');
-            else console.warn('[豫] Weird response:', res.status);
+            if (res.ok) console.log('Lumen still vibin!');
+            else console.warn('Weird response:', res.status);
         })
-        .catch(err => console.error('[彫] Lumen may be snoozin:', err));
+        .catch(err => console.error(' Lumen snoozin, wake him up:', err));
 }
 keepLumenAlive();
 setInterval(keepLumenAlive, PING_INTERVAL);
@@ -91,7 +92,7 @@ app.post('/ask', async (req, res) => {
 
             if (isImage) {
                 if (chatModel !== 'gpt-4o') {
-                    return res.status(400).json({ error: 'Image analysis requires Lumen o3 (gpt-4o).' });
+                    return res.status(400).json({ error: 'Image analysis requires Lumen V or Lumen o3 (gpt-5 or gpt-4o).' });
                 }
                 userMessageContent = [
                     { type: 'text', text: prompt || 'Describe this image.' },
@@ -121,7 +122,7 @@ app.post('/ask', async (req, res) => {
 
         res.json({ response: completion.choices[0].message.content });
     } catch (error) {
-        console.error('笶/ask failed:', error);
+        console.error('/ask failed:', error);
         res.status(500).json({ error: error.message });
     }
 });
