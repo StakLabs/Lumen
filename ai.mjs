@@ -82,9 +82,11 @@ app.post('/ask', async (req, res) => {
 
         const chatModel = findModel(model);
 
+        console.log('Using model:', chatModel);
+        console.log('Sent:' + req.body)
+
         let messages = [{ role: 'system', content: system }];
         let userMessageContent;
-
         if (fileUrl) {
             const lowerUrl = fileUrl.toLowerCase();
             const isImage = /\.(png|jpe?g|gif|bmp|webp)$/i.test(lowerUrl);
