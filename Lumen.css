@@ -13,6 +13,21 @@ body {
 .title {
     text-align: center;
     font-size: 64px;
+    margin-top: 30px;body {
+    background: rgb(35, 35, 35);
+    color: #f5f5f5;
+    font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+    margin: 0;
+    padding-bottom: 200px;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Titles */
+.title {
+    text-align: center;
+    font-size: 64px;
     margin-top: 30px;
     font-weight: 700;
     background: linear-gradient(to right, #ffffff, #ccc);
@@ -314,3 +329,306 @@ body {
 .custom button#saveInstructions:active {
     transform: translateY(0);
 }
+
+
+    font-weight: 700;
+    background: linear-gradient(to right, #ffffff, #ccc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.title2 {
+    text-align: center;
+    font-size: 28px;
+    color: #bbbbbb;
+    margin-top: -10px;
+    font-family: 'Courier New', monospace;
+}
+
+.subtitle {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 400;
+    color: #888;
+}
+
+/* Messages */
+.userMessage, .lumenMessage {
+    animation: slideFadeIn 0.3s ease;
+    padding: 15px 20px;
+    border-radius: 16px;
+    width: fit-content;
+    max-width: 85%;
+    font-size: 16px;
+    word-wrap: break-word;
+    line-height: 1.6;
+    margin: 14px auto;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(3px);
+}
+
+.userMessage {
+    background: linear-gradient(135deg, #444 0%, #333 100%);
+    color: #fff;
+    margin-left: auto;
+    margin-right: 20px;
+}
+
+.lumenMessage {
+    background: linear-gradient(135deg, #2c2c2c 0%, #1f1f1f 100%);
+    color: #e8e8e8;
+    margin-right: auto;
+    margin-left: 20px;
+}
+
+@keyframes slideFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Input container - flexbox one-liner at bottom */
+.input-box-container {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 720px; /* max width to keep it tidy on desktop */
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    z-index: 99;
+}
+
+/* Text input */
+#userMessageInput {
+    flex-grow: 1;
+    min-width: 0;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background-color: #292929;
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    box-shadow: inset 0 0 0 2px #3a3a3a;
+    transition: box-shadow 0.2s ease, border 0.2s ease;
+    max-height: 40px;
+}
+
+#userMessageInput:focus {
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.6);
+}
+
+/* Buttons and select styling - consistent hover and active effects */
+#sendMessageButton,
+#fileButton,
+#voiceToggleButton,
+#selectedModel {
+    flex-shrink: 0;
+    padding: 10px 16px;
+    font-size: 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.25s ease, transform 0.1s ease, box-shadow 0.25s ease;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+    border: none;
+    user-select: none;
+}
+
+/* Button specific colors */
+#sendMessageButton {
+    background: linear-gradient(to right, #007bff, #0056b3);
+    color: white;
+}
+
+#fileButton {
+    background: linear-gradient(to right, #666, #555);
+    color: white;
+    border: 1px solid #777;
+}
+
+#voiceToggleButton {
+    background: linear-gradient(to right, #ff5555, #cc4444);
+    color: white;
+}
+
+#selectedModel {
+    appearance: none;
+    background-color: #292929;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 10px 20px;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Hover states */
+#sendMessageButton:hover {
+    background: linear-gradient(to right, #0056b3, #003d7a);
+    box-shadow: 0 5px 15px rgba(0, 86, 179, 0.7);
+    transform: translateY(-2px);
+}
+
+#fileButton:hover {
+    background: linear-gradient(to right, #777, #666);
+    box-shadow: 0 4px 12px rgba(102, 102, 102, 0.7);
+    transform: translateY(-1px);
+}
+
+#voiceToggleButton:hover {
+    background: linear-gradient(to right, #cc4444, #991f1f);
+    box-shadow: 0 5px 15px rgba(204, 68, 68, 0.7);
+    transform: translateY(-2px);
+}
+
+#selectedModel:hover {
+    background-color: #333;
+    border-color: #777;
+    box-shadow: 0 5px 15px rgba(100, 100, 100, 0.7);
+}
+
+#sendMessageButton:active,
+#fileButton:active,
+#voiceToggleButton:active,
+#selectedModel:active {
+    transform: scale(0.95);
+    box-shadow: none;
+}
+
+/* Responsive tuning to keep consistent scale & spacing */
+@media screen and (max-width: 768px) {
+    .input-box-container {
+        width: 95%;
+        max-width: 100%;
+        padding: 8px 12px;
+        gap: 8px;
+    }
+    #userMessageInput {
+        font-size: 14px;
+        max-height: 38px;
+        padding: 10px 12px;
+    }
+    #sendMessageButton,
+    #fileButton,
+    #voiceToggleButton,
+    #selectedModel {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+
+#thing {
+    text-align: center;
+    font-size: 50px;
+    color: #ccc;
+    margin-top: 100px;
+}
+/* Custom Instructions */
+.custom {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+}
+
+.custom button#set {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.custom button#set:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+.custom button#set:active {
+    transform: translateY(0);
+}
+
+.custom h2 {
+    color: #fff;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.custom p {
+    color: #bbb;
+    font-size: 14px;
+    margin-top: 0;
+}
+
+.custom textarea {
+    width: 300px;
+    height: 150px;
+    padding: 12px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background-color: #292929;
+    color: #fff;
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.4);
+    transition: border-color 0.3s;
+}
+
+.custom textarea:focus {
+    border-color: #007bff;
+}
+
+.custom button#saveInstructions {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.custom button#saveInstructions:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+.custom button#saveInstructions:active {
+    transform: translateY(0);
+}
+
