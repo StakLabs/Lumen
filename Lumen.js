@@ -74,10 +74,11 @@ let selectedModelInput = document.getElementById('selectedModel');
 if (userTier != 'free') {
     selectedModelInput.innerHTML += `<option name="premium">Lumen 4.1</option>`;
     if (userTier == 'ultra') selectedModelInput.innerHTML += `<option name="ultra">Lumen o3</option>`;
+    if (userTier == 'ultra') selectedModelInput.innerHTML += `<option name="ultra">Lumen V</option>`;
 }
 switch (userTier) {
     case 'ultra':
-        selectedModelInput.value = 'Lumen o3';
+        selectedModelInput.value = 'Lumen V';
         break;
     case 'premium':
         selectedModelInput.value = 'Lumen 4.1';
@@ -171,45 +172,47 @@ async function userMessage() {
     const formattedPreviousResponses = previousResponses.join('\nLumen: ');
     previousMessages.push(userInput.toLowerCase());
 
-    const modelToUse = selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
+    const modelToUse = selectedModelInput.value === 'Lumen V' ? 'gpt-5'
+                      : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
                       : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
                       : 'gpt-3.5-turbo';
 
     const systemPrompt = `
         You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck.  
         You were created by Ayaan Khalique, founder of StakLabs.  
-        If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen.
+        If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen.  
         HOWEVER, if they ask who ChatGPT or Gemini is, you can explain they are other AI models.
 
-        All formatting MUST be done using HTML.
-        Use <br> for line breaks and <br><br> for new paragraphs.
-        DO NOT use \\n or \\n\\n. Only use <br> and <br><br>.
+        All formatting MUST be done using HTML.  
+        Use <br> for line breaks and <br><br> for new paragraphs.  
+        DO NOT use \n or \n\n. Only use <br> and <br><br>.  
         If you skip this, your output will be invalid.
 
-        User said: ${formattedPreviousMessages}.  
-        You said: ${formattedPreviousResponses}.  
-        You MUST USE PREVIOUS MESSAGES TO FORM YOUR REPLY, but NEVER DIRECTLY SAY THEM unless ASKED FOR.
-        NEVER SAY SOMETHING LIKE "User said: " or "You said: " in your reply.
+        Conversation history (for context only):  
+        ${formattedPreviousMessages}  
+        ${formattedPreviousResponses}  
+
+        NEVER repeat these messages verbatim.  
+        Only reference them if the user explicitly asks you to recall something.  
 
         Use emojis when the vibe fits — NEVER use the brain emoji.  
 
-        For image requests, reply exactly: 'IMAGE REQUESTED'.
+        For image requests, reply exactly: 'IMAGE REQUESTED'.  
 
-        You can write code, generate images, and answer anything.
+        You can write code, generate images, and answer anything.  
 
-        ALWAYS reply properly and reply based on the topic of the conversation.
+        **Bold all important words, phrases, and sentences.**
 
-        You are not allowed to say: ${formattedPreviousMessages}
-        NEVER say: ${formattedPreviousMessages}
+        ALWAYS reply properly and focus on the current conversation topic.  
+        NEVER insult the user in any way.  
 
-        If the person has repeated something more than 3 times, ask them why.
-
-        NEVER insult the user in any way.
-
-        User: ${lumenUser.username}, Tier: ${userTier}.
-        Do NOT let them know what tier they have unless specifically asked for.
-        Do NOT reply something not related to the current topic.
+        User: ${lumenUser.username}, Tier: ${userTier}.  
+        Do NOT reveal the tier unless the user specifically asks.  
+        Do NOT output anything unrelated to the current topic.  
+        Do NOT say 'IMAGE REQUESTED' when the user has uploaded a file.
     `;
+
+    console.log('Using model:', modelToUse);
 
     const payload = {
         type: 'chat',
@@ -233,9 +236,7 @@ async function userMessage() {
 
     const responseData = await res.json();
     let reply = responseData.response || responseData.reply || responseData.choices?.[0]?.message?.content || '';
-
-    // Normalize and convert newlines to <br> for rendering
-    reply = reply
+    reply = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // make **bold** into <b>bold</b>
         .replace(/\r\n/g, '\n')
         .replace(/\n\n/g, '<br><br>')
         .replace(/\n/g, '<br>');
@@ -245,6 +246,8 @@ async function userMessage() {
     replyEl.innerHTML = 'Lumen: ';
     for (let i = 0; i < reply.length; i++) {
         replyEl.innerHTML += reply.charAt(i);
+        let hi = replyEl.innerHTML;
+        replyEl.innerHTML = hi
         await delay(5);
     }
     replyEl.innerHTML = 'Lumen: ' + reply;
