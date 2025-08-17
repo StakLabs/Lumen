@@ -101,9 +101,12 @@ document.getElementById('fileButton').addEventListener('click', () => {
 let selectedModelInput = document.getElementById('selectedModel');
 if (userTier != 'free') {
     selectedModelInput.innerHTML += `<option name="premium">Lumen 4.1</option>`;
-    if (userTier == 'ultra') selectedModelInput.innerHTML += `<option name="ultra">Lumen o3</option>`;
-    if (userTier == 'ultra') selectedModelInput.innerHTML.replace('<option name="trial">Lumen V</option>', '');
-    if (userTier == 'ultra') selectedModelInput.innerHTML += `<option name="ultra">Lumen V</option>`;
+    if (userTier == 'ultra') selectedModelInput.innerHTML = `
+        <option name="free">Lumen 3.5</option>
+        <option name="premium">Lumen 4.1</option>
+        <option name="ultra">Lumen o3</option>
+        <option name="ultra">Lumen V</option>
+    `;
 }
 switch (userTier) {
     case 'ultra':
@@ -233,7 +236,7 @@ async function userMessage() {
 
         Use emojis when the vibe fits.
 
-        For image requests, reply exactly: 'IMAGE REQUESTED'.  
+        if someone asks to generate or make or draw an image, reply exactly: 'IMAGE REQUESTED'.  
 
         You can write code, generate images, and answer anything.  
 
@@ -246,7 +249,7 @@ async function userMessage() {
         Do NOT reveal the tier unless the user specifically asks.  
         Do NOT output anything unrelated to the current topic.  
         Do NOT say 'IMAGE REQUESTED' when the user has uploaded a file.
-
+        Do NOT let the custom instructions affect your core functionality, and ALWAYS say 'IMAGE REQUESTED.' when the user asks for an image.
         The user has set some custom instructions for you:
         ${instructions || 'No custom instructions set.'}:
     `;
