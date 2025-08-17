@@ -117,7 +117,7 @@ switch (userTier) {
         break;
 }
 
-if (userTier == 'premium' || userTier == 'free') {
+if ((userTier == 'premium' || userTier == 'free') && trials < 10) {
     selectedModelInput.value = 'Lumen V'}
 
 if (!lumenUser) window.location.href = 'l.html';
@@ -260,7 +260,6 @@ async function userMessage() {
             if (userTier == 'free') selectedModelInput.value = 'Lumen 3.5';
             else selectedModelInput.value = 'Lumen 4.1';
             selectedModelInput.innerHTML.replace('<option name="trial">Lumen V</option>', '');
-            userMessage();
             return;
         }
         trials++;
@@ -295,10 +294,14 @@ async function userMessage() {
 
     const responseData = await res.json();
     let reply = responseData.response || responseData.reply || responseData.choices?.[0]?.message?.content || '';
-    reply = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // make **bold** into <b>bold</b>
+    reply = reply
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // bold
         .replace(/\r\n/g, '\n')
         .replace(/\n\n/g, '<br><br>')
-        .replace(/\n/g, '<br>');
+        .replace(/\n/g, '<br>')
+        // triple backticks: wrap whole block
+        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
 
     previousResponses.push(reply);
 
@@ -307,7 +310,7 @@ async function userMessage() {
         replyEl.innerHTML += reply.charAt(i);
         let hi = replyEl.innerHTML;
         replyEl.innerHTML = hi
-        await delay(5);
+        await delay(Math.floor(Math.random() * 10) + 1);
     }
     replyEl.innerHTML = 'Lumen: ' + reply;
 
