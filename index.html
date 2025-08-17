@@ -13,6 +13,9 @@
         <br class="br" />
         <h1 id="thing"></h1>
     </div>
+    <div class="custom">
+        <button id="set">Custom Instructions</button>
+    </div>
     <div class="input-box-container">
         <input type="text" placeholder="Ask Anything..." id="userMessageInput" onkeydown="if(event.key==='Enter') userMessage()" autocomplete="off" />
         <button id="sendMessageButton" onclick="userMessage()">Send</button>
@@ -21,6 +24,7 @@
         <button id="voiceToggleButton">🎙️ Start Voice Mode</button>
         <select id="selectedModel">
             <option name="free">Lumen 3.5</option>
+            <option name="trial">Lumen V</option>
         </select>
     </div>
     <br /><br />
@@ -36,13 +40,13 @@
             } else if (r < 20) {
                 thing = 'What would you like to know?';
             } else if (r < 30) {
-                thing = 'Ready when you are!';
+                thing = 'Ready when you are.';
             } else if (r < 40) {
                 thing = 'What can I do for you?';
             } else if (r < 50) {
                 thing = `How can I help?`;
             } else if (r < 60) {
-                thing = `Hey, ${lumenUser.username}. Ready to dive in?`
+                thing = `Ready to dive in?`
             } else if (r < 70) {
                 thing = 'Where should we begin?';
             } else if (r < 80) {
