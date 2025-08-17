@@ -235,3 +235,82 @@ body {
     color: #ccc;
     margin-top: 100px;
 }
+/* Custom Instructions */
+.custom {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+}
+
+.custom button#set {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.custom button#set:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+.custom button#set:active {
+    transform: translateY(0);
+}
+
+.custom h2 {
+    color: #fff;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.custom p {
+    color: #bbb;
+    font-size: 14px;
+    margin-top: 0;
+}
+
+.custom textarea {
+    width: 300px;
+    height: 150px;
+    padding: 12px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background-color: #292929;
+    color: #fff;
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.4);
+    transition: border-color 0.3s;
+}
+
+.custom textarea:focus {
+    border-color: #007bff;
+}
+
+.custom button#saveInstructions {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.custom button#saveInstructions:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+.custom button#saveInstructions:active {
+    transform: translateY(0);
+}
