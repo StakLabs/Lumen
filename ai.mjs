@@ -57,7 +57,7 @@ app.post('/ask', async (req, res) => {
         // Image generation
         if (type === 'image') {
             if (!['premium','ultra'].includes(userTier)) return res.status(403).json({ error: 'Image generation only for premium users.' });
-            const dalleModel = model === 'Lumen o3' || 'Lumen V' ? 'gpt-image-1' : 'dall-e-2';
+            const dalleModel = model === 'Lumen o3' || 'Lumen V' ? 'dall-e-3' : 'dall-e-2';
             const dalleSize = model === 'Lumen o3' || 'Lumen V' ? '1024x1024' : '512x512';
             const response = await openai.images.generate({ model: dalleModel, prompt, n: 1, size: dalleSize });
             return res.json(response);
