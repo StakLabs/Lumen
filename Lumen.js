@@ -1,3 +1,4 @@
+//Made by Ayaan Khalique
 const lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
 const userTier = lumenUser?.tier || 'free';
 
@@ -350,3 +351,4 @@ async function userMessage() {
 function delay(ms) {
     return new Promise(res => setTimeout(res, ms));
 }
+
