@@ -37,7 +37,6 @@ setInterval(() => {
 
 // ------------------ MODEL MAPPING ------------------
 function findModel(modelName) {
-  // Accept both friendly names and OpenAI names
   switch (modelName.toLowerCase()) {
     case 'lumen o3':
     case 'gpt-4o':
@@ -64,6 +63,7 @@ app.post('/ask', async (req, res) => {
         if (!model) return res.status(400).json({ error: 'Model not specified.' });
 
         const chatModel = findModel(model);
+        let userMessageContent = prompt;
 
         // ---------------- IMAGE GENERATION ----------------
         if (type === 'image') {
@@ -75,21 +75,24 @@ app.post('/ask', async (req, res) => {
         }
 
         // ---------------- FILE INPUT ----------------
-        let userMessageContent = prompt;
-
         if (fileUrl) {
             const lowerUrl = fileUrl.toLowerCase();
             const isImage = /\.(png|jpe?g|gif|bmp|webp)$/i.test(lowerUrl);
             const isText = /\.(txt|md|csv|json|js|mjs|ts|pdf)$/i.test(lowerUrl);
 
             if (chatModel === 'gpt-5') {
-                // GPT-5 Responses API supports input_file
+                // Read the file locally and encode to base64
+                const filename = fileUrl.split('/').pop();
+                const localFilePath = path.join(__dirname, 'uploads', filename);
+                const fileBuffer = await fs.readFile(localFilePath);
+                const base64File = fileBuffer.toString('base64');
+
                 const gpt5Input = [
                     {
                         role: 'user',
                         content: [
                             { type: 'input_text', text: prompt || 'Analyze the uploaded file and summarize key points.' },
-                            { type: 'input_file', file_url: fileUrl }
+                            { type: 'input_file', file_name: filename, file_contents_base64: base64File }
                         ]
                     }
                 ];
@@ -129,8 +132,7 @@ app.post('/ask', async (req, res) => {
     }
 });
 
-// ---------------- PING ENDPOINT ----------------
+// ---------------- PING ENDPOINT ------------------
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
-//
