@@ -1,4 +1,3 @@
-//Made by Ayaan Khalique
 const lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
 const userTier = lumenUser?.tier || 'free';
 
@@ -28,7 +27,7 @@ const inputField = document.getElementById('userMessageInput');
 
 voiceBtn.addEventListener('click', () => {
     speechMode = !speechMode;
-    voiceBtn.innerText = speechMode ? '🔇 Stop Voice Mode' : '🎙️ Start Voice Mode';
+    voiceBtn.innerText = speechMode ? '🔇 Stop' : '🎙️ Voice';
     inputField.disabled = speechMode;
     inputField.placeholder = speechMode ? '🎤 Listening...' : 'Type a message...';
 
@@ -145,12 +144,13 @@ getTime();
 async function userMessage() {
     if (wait !== 0) return;
 
-    const instructions = (localStorage.getItem(lumenUser.username + '_instructions')) || '';
+    const inputBox = document.querySelector('.input-box-container');
+    if (!inputBox.classList.contains('bottom')) inputBox.classList.add('bottom');
 
+    const instructions = (localStorage.getItem(lumenUser.username + '_instructions')) || '';
     const userInput = document.querySelector('#userMessageInput').value.trim();
     const fileInput = document.getElementById("fileInput");
     const file = fileInput.files[0];
-
     if (!userInput && !file) return;
 
     document.querySelector('.title2').innerHTML = '<!--This used to be a title-->';
@@ -223,7 +223,6 @@ async function userMessage() {
         All formatting MUST be done using HTML.  
         Use <br> for line breaks and <br><br> for new paragraphs.  
         DO NOT use \n or \n\n. Only use <br> and <br><br>.  
-        If you skip this, your output will be invalid.
 
         Conversation history (for context only):  
         ${formattedPreviousMessages}  
@@ -246,6 +245,8 @@ async function userMessage() {
         ALWAYS reply properly and focus on the current conversation topic.  
         NEVER insult the user in any way.
 
+        All memories from previous conversations: ${JSON.parse(localStorage.getItem('lumenMemory_' + lumenUser.username)) || []}
+
         User: ${lumenUser.username}, Tier: ${userTier}.  
         Do NOT reveal the tier unless the user specifically asks.  
         Do NOT output anything unrelated to the current topic.  
@@ -254,7 +255,7 @@ async function userMessage() {
         The user has set some custom instructions for you:
         ${instructions || 'No custom instructions set.'}:
     `;
-    
+
     if (modelToUse === 'gpt-5' && userTier !== 'ultra') {
         if (trials == 10) {
             alert("You have reached your limit of messages for Lumen V. Your limit resets tomorrow, upgrade to Ultra for unlimited access.");
@@ -268,24 +269,57 @@ async function userMessage() {
         const formattedDate = today.toISOString().slice(0, 10);
         localStorage.setItem('trials_' + lumenUser.username + '_' + formattedDate, trials);
     }
-    
+
     document.querySelector('#userMessageInput').value = '';
 
     console.log('Using model:', modelToUse);
+    const memoryLoad = {
+            type: 'chat',
+            prompt: `Classify whether this user input contains:
+                    1) Personal information (age, location, name, etc.)
+                    2) Requests to remember something explicitly
+                    3) Preferences or interests
+                    4) Any other relevant information that should be stored in memory
+                    Reply with only YES if any of these apply, otherwise NO. Nothing else.
+                    User input: "${userInput}"`,
+            system: "You are a strict memory classifier. Reply only YES or NO.",
+            model: 'gpt-3.5-turbo',
+        };
+
+
+    const memoryRes = await fetch('https://lumen-ai.onrender.com/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(memoryLoad)
+    });
+    const memoryData = await memoryRes.json();
+    let memoryReply = memoryData.response || memoryData.reply || memoryData.choices?.[0]?.message?.content || '';
+    const replyEl = document.createElement('p');
+    replyEl.classList.add('lumenMessage');
+    replyEl.innerHTML = 'Thinking...';
+    document.getElementById(`a${messages}a`).appendChild(replyEl);
+    if (memoryReply.includes('YES')) {
+        replyEl.innerHTML = 'Updating Memory...';
+        await delay(1000);
+
+        let memory = JSON.parse(localStorage.getItem('lumenMemory_' + lumenUser.username)) || [];
+        memory.push(userInput);
+        localStorage.setItem('lumenMemory_' + lumenUser.username, JSON.stringify(memory));
+
+        replyEl.innerHTML = 'Memory updated successfully.';
+        await delay(1000);
+        replyEl.innerHTML = 'Thinking...';
+    }
+
 
     const payload = {
         type: 'chat',
-        prompt: userInput || "Uploaded file.",
+        prompt: userInput,
         system: systemPrompt,
         model: modelToUse,
         userTier: userTier,
         file: fileRef
     };
-
-    const replyEl = document.createElement('p');
-    replyEl.classList.add('lumenMessage');
-    replyEl.innerHTML = 'Thinking...';
-    document.getElementById(`a${messages}a`).appendChild(replyEl);
 
     const res = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
@@ -296,13 +330,11 @@ async function userMessage() {
     const responseData = await res.json();
     let reply = responseData.response || responseData.reply || responseData.choices?.[0]?.message?.content || '';
     reply = reply
-        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // bold
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
         .replace(/\r\n/g, '\n')
         .replace(/\n\n/g, '<br><br>')
         .replace(/\n/g, '<br>')
-        // triple backticks: wrap whole block
         .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-
 
     previousResponses.push(reply);
 
@@ -348,7 +380,7 @@ async function userMessage() {
     fileInput.value = '';
 }
 
+
 function delay(ms) {
     return new Promise(res => setTimeout(res, ms));
 }
-
