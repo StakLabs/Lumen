@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="Lumen.css">
 </head>
 <body>
-    <p style="text-align: center;">Version 2.4.0</p>
+    <p style="text-align: center;">Version 2.5.0</p>
     <h1 class="title">Lumen</h1>
     <div class="subtitle">Simply Bright</div>
     <div class="title2">
@@ -17,15 +17,17 @@
         <button id="set">Custom Instructions</button>
     </div>
     <div class="input-box-container">
-        <input type="text" placeholder="Ask Anything..." id="userMessageInput" onkeydown="if(event.key==='Enter') userMessage()" autocomplete="off" />
+    <input type="text" placeholder="Ask Anything..." id="userMessageInput" onkeydown="if(event.key==='Enter') userMessage()" autocomplete="off" />
+    <div class="buttons-row">
         <button id="sendMessageButton" onclick="userMessage()">Send</button>
-        <input type="file" id="fileInput" hidden />
         <button id="fileButton">Upload</button>
-        <button id="voiceToggleButton">🎙️ Start Voice Mode</button>
+        <button id="voiceToggleButton">🎙️ Voice</button>
         <select id="selectedModel">
             <option name="free">Lumen 3.5</option>
             <option name="trial">Lumen V</option>
         </select>
+    </div>
+    <input type="file" id="fileInput" hidden />
     </div>
     <br /><br />
     <div id="container"></div>
