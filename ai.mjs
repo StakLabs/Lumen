@@ -37,9 +37,17 @@ setInterval(() => {
 
 // ------------------ MODEL MAPPING ------------------
 function findModel(modelName) {
-    if (modelName === 'Lumen o3') return 'gpt-4o';
-    if (modelName === 'Lumen V') return 'gpt-5';
-    throw new Error('Unsupported model. Only GPT-4o and GPT-5 are allowed.');
+  // Accept both friendly names and OpenAI names
+  switch (modelName.toLowerCase()) {
+    case 'lumen o3':
+    case 'gpt-4o':
+      return 'gpt-4o';
+    case 'lumen v':
+    case 'gpt-5':
+      return 'gpt-5';
+    default:
+      throw new Error('Unsupported model. Only GPT-4o and GPT-5 are allowed.');
+  }
 }
 
 // ------------------ UPLOAD ENDPOINT ------------------
