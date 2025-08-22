@@ -81,7 +81,6 @@ app.post('/ask', async (req, res) => {
             const isText = /\.(txt|md|csv|json|js|mjs|ts|pdf)$/i.test(lowerUrl);
 
             if (chatModel === 'gpt-5') {
-                // Read the file locally and encode to base64
                 const filename = fileUrl.split('/').pop();
                 const localFilePath = path.join(__dirname, 'uploads', filename);
                 const fileBuffer = await fs.readFile(localFilePath);
@@ -92,13 +91,15 @@ app.post('/ask', async (req, res) => {
                         role: 'user',
                         content: [
                             { type: 'input_text', text: prompt || 'Analyze the uploaded file and summarize key points.' },
-                            { type: 'input_file', file_name: filename, file_contents_base64: base64File }
+                            { type: 'input_file', filename: filename, content: base64File }
                         ]
                     }
                 ];
+
                 const response = await openai.responses.create({ model: 'gpt-5', input: gpt5Input });
                 return res.json({ response: response.output_text || 'No output from GPT-5.' });
             }
+
 
             if (chatModel === 'gpt-4o') {
                 if (isImage) {
