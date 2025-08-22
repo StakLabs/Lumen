@@ -27,123 +27,89 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Keep Lumen alive
 const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
 setInterval(() => {
-    fetch(LUMEN_PING_URL)
-        .then(res => console.log('Lumen ping', res.status))
-        .catch(err => console.error(err));
+    fetch(LUMEN_PING_URL).catch(() => {});
 }, 10 * 60 * 1000);
 
-// ------------------ MODEL MAPPING ------------------
 function findModel(modelName) {
-  switch (modelName.toLowerCase()) {
-    case 'lumen o3':
-    case 'gpt-4o':
-      return 'gpt-4o';
-    case 'lumen v':
-    case 'gpt-5':
-      return 'gpt-5';
-    default:
-      throw new Error('Unsupported model. Only GPT-4o and GPT-5 are allowed.');
-  }
+    if (modelName === 'Lumen V') return 'gpt-5';
+    if (modelName === 'Lumen o3') return 'gpt-4o';
+    if (modelName === 'Lumen 4.1') return 'gpt-4.1-mini';
+    return 'gpt-3.5-turbo';
 }
 
-// ------------------ UPLOAD ENDPOINT ------------------
 app.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
     res.json({ success: true, url: fileUrl, filename: req.file.filename });
 });
 
-// ------------------ ASK ENDPOINT ------------------
 app.post('/ask', async (req, res) => {
     try {
         const { prompt='', system='', model, userTier='free', file: fileUrl, type } = req.body;
         if (!model) return res.status(400).json({ error: 'Model not specified.' });
 
-        const chatModel = findModel(model);
-        let userMessageContent = prompt;
+        if (type === 'web_search_preview') {
+            const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+            const response = await client.responses.create({
+                model: findModel(model),
+                tools: [{ type: "web_search_preview" }],
+                input: prompt,
+                instructions: system
+            });
+            return res.json(response.output_text);
+        }
 
-        // ---------------- IMAGE GENERATION ----------------
         if (type === 'image') {
             if (!['premium','ultra'].includes(userTier)) return res.status(403).json({ error: 'Image generation only for premium users.' });
-            const dalleModel = chatModel === 'gpt-4o' || chatModel === 'gpt-5' ? 'dall-e-3' : 'dall-e-2';
-            const dalleSize = chatModel === 'gpt-4o' || chatModel === 'gpt-5' ? '1024x1024' : '512x512';
+            const dalleModel = (model === 'Lumen o3' || model === 'Lumen V') ? 'dall-e-3' : 'dall-e-2';
+            const dalleSize = (model === 'Lumen o3' || model === 'Lumen V') ? '1024x1024' : '512x512';
             const response = await openai.images.generate({ model: dalleModel, prompt, n: 1, size: dalleSize });
             return res.json(response);
         }
 
-        // ---------------- FILE INPUT ----------------
+        const chatModel = findModel(model);
+        const messages = [];
+        if (system && system.trim().length > 0) {
+            messages.push({ role: 'system', content: system });
+        }
+        let userMessageContent = prompt;
+
         if (fileUrl) {
             const lowerUrl = fileUrl.toLowerCase();
             const isImage = /\.(png|jpe?g|gif|bmp|webp)$/i.test(lowerUrl);
-            const isText = /\.(txt|md|csv|json|js|mjs|ts|pdf)$/i.test(lowerUrl);
+            const isText = /\.(txt|md|csv|json|js|mjs|ts)$/i.test(lowerUrl);
 
-            if (chatModel === 'gpt-5') {
-                const filename = fileUrl.split('/').pop();
-                const gpt5Input = [
-                    {
-                        role: 'system',
-                        content: system // systemPrompt already includes user instructions
-                    },
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'input_text', text: prompt || 'Analyze the uploaded file and summarize key points.' },
-                            { type: 'input_file', filename, url: fileUrl }
-                        ]
-                    }
+            if (isImage) {
+                if (!['gpt-4o','gpt-5'].includes(chatModel)) return res.status(400).json({ error: 'Image analysis requires Lumen o3/V.' });
+                userMessageContent = [
+                    { type: 'text', text: prompt || 'Describe this image.' },
+                    { type: 'image_url', image_url: { url: fileUrl } }
                 ];
-
-                const response = await openai.responses.create({ model: 'gpt-5', input: gpt5Input });
-                return res.json({ response: response.output_text || 'No output from GPT-5.' });
-            }
-
-            if (chatModel === 'gpt-4o') {
-                if (isImage) {
-                    userMessageContent = [
-                        { type: 'text', text: prompt || 'Describe this image.' },
-                        { type: 'image_url', image_url: { url: fileUrl } }
-                    ];
-                } else if (isText) {
-                    try {
-                        const filename = fileUrl.split('/').pop();
-                        const localFilePath = path.join(__dirname, 'uploads', filename);
-                        const fileText = await fs.readFile(localFilePath, 'utf-8');
-                        userMessageContent = `${prompt}\n\n----- FILE CONTENT (${filename}) -----\n${fileText}`;
-                    } catch (e) {
-                        return res.status(500).json({ error: 'Failed to read uploaded file.' });
-                    }
-                } else {
-                    return res.status(400).json({ error: 'Unsupported file type.' });
+            } else if (isText) {
+                try {
+                    const filename = fileUrl.split('/').pop();
+                    const localFilePath = path.join(__dirname, 'uploads', filename);
+                    const fileText = await fs.readFile(localFilePath, 'utf-8');
+                    userMessageContent = `${prompt}\n\n----- FILE CONTENT (${filename}) -----\n${fileText}`;
+                } catch {
+                    return res.status(500).json({ error: 'Failed to read uploaded file.' });
                 }
+            } else {
+                return res.status(400).json({ error: 'Unsupported file type.' });
             }
         }
 
-        // ---------------- CHAT COMPLETION ----------------
-        const messages = [
-            { role: 'system', content: system }, // full systemPrompt with user instructions
-            { role: 'user', content: userMessageContent }
-        ];
-
-        let completion;
-        if (chatModel === 'gpt-5') {
-            completion = await openai.responses.create({ model: 'gpt-5', input: messages });
-            res.json({ response: completion.output_text || 'No output from GPT-5.' });
-        } else {
-            completion = await openai.chat.completions.create({ model: chatModel, messages });
-            res.json({ response: completion.choices[0].message.content });
-        }
+        messages.push({ role: 'user', content: userMessageContent });
+        const completion = await openai.chat.completions.create({ model: chatModel, messages });
+        res.json({ response: completion.choices[0].message.content });
 
     } catch (err) {
-        console.error('/ask failed:', err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// ---------------- PING ENDPOINT ------------------
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
-//
