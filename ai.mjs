@@ -81,24 +81,22 @@ app.post('/ask', async (req, res) => {
             const isText = /\.(txt|md|csv|json|js|mjs|ts|pdf)$/i.test(lowerUrl);
 
             if (chatModel === 'gpt-5') {
-                const filename = fileUrl.split('/').pop();
-                const localFilePath = path.join(__dirname, 'uploads', filename);
-                const fileBuffer = await fs.readFile(localFilePath);
-                const base64File = fileBuffer.toString('base64');
+    const filename = fileUrl.split('/').pop();
 
-                const gpt5Input = [
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'input_text', text: prompt || 'Analyze the uploaded file and summarize key points.' },
-                            { type: 'input_file', filename: filename, content: base64File }
-                        ]
-                    }
-                ];
+    const gpt5Input = [
+        {
+            role: 'user',
+            content: [
+                { type: 'input_text', text: prompt || 'Analyze the uploaded file and summarize key points.' },
+                { type: 'input_file', filename: filename, url: fileUrl } // <-- use url, not content
+            ]
+        }
+    ];
 
-                const response = await openai.responses.create({ model: 'gpt-5', input: gpt5Input });
-                return res.json({ response: response.output_text || 'No output from GPT-5.' });
-            }
+    const response = await openai.responses.create({ model: 'gpt-5', input: gpt5Input });
+    return res.json({ response: response.output_text || 'No output from GPT-5.' });
+}
+
 
 
             if (chatModel === 'gpt-4o') {
