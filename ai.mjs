@@ -81,23 +81,24 @@ app.post('/ask', async (req, res) => {
             const isText = /\.(txt|md|csv|json|js|mjs|ts|pdf)$/i.test(lowerUrl);
 
             if (chatModel === 'gpt-5') {
-    const filename = fileUrl.split('/').pop();
+                const filename = fileUrl.split('/').pop();
+                const gpt5Input = [
+                    {
+                        role: 'system',
+                        content: system // systemPrompt already includes user instructions
+                    },
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'input_text', text: prompt || 'Analyze the uploaded file and summarize key points.' },
+                            { type: 'input_file', filename, url: fileUrl }
+                        ]
+                    }
+                ];
 
-    const gpt5Input = [
-        {
-            role: 'user',
-            content: [
-                { type: 'input_text', text: prompt || 'Analyze the uploaded file and summarize key points.' },
-                { type: 'input_file', filename: filename, url: fileUrl } // <-- use url, not content
-            ]
-        }
-    ];
-
-    const response = await openai.responses.create({ model: 'gpt-5', input: gpt5Input });
-    return res.json({ response: response.output_text || 'No output from GPT-5.' });
-}
-
-
+                const response = await openai.responses.create({ model: 'gpt-5', input: gpt5Input });
+                return res.json({ response: response.output_text || 'No output from GPT-5.' });
+            }
 
             if (chatModel === 'gpt-4o') {
                 if (isImage) {
@@ -121,9 +122,19 @@ app.post('/ask', async (req, res) => {
         }
 
         // ---------------- CHAT COMPLETION ----------------
-        const messages = [{ role: 'system', content: system }, { role: 'user', content: userMessageContent }];
-        const completion = await openai.chat.completions.create({ model: chatModel, messages });
-        res.json({ response: completion.choices[0].message.content });
+        const messages = [
+            { role: 'system', content: system }, // full systemPrompt with user instructions
+            { role: 'user', content: userMessageContent }
+        ];
+
+        let completion;
+        if (chatModel === 'gpt-5') {
+            completion = await openai.responses.create({ model: 'gpt-5', input: messages });
+            res.json({ response: completion.output_text || 'No output from GPT-5.' });
+        } else {
+            completion = await openai.chat.completions.create({ model: chatModel, messages });
+            res.json({ response: completion.choices[0].message.content });
+        }
 
     } catch (err) {
         console.error('/ask failed:', err);
