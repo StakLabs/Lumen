@@ -120,6 +120,13 @@ switch (userTier) {
 if ((userTier == 'premium' || userTier == 'free') && trials < 10) {
     selectedModelInput.value = 'Lumen V'}
 
+let modeSelector = document.getElementById('modeSelector');
+if (userTier !== 'free') {
+    modeSelector.innerHTML += `
+        <option>Draw an Image</option>
+    `;
+}
+
 if (!lumenUser) window.location.href = 'l.html';
 
 let acrossChats = JSON.parse(localStorage.getItem('across_' + lumenUser.username)) || [];
@@ -218,10 +225,16 @@ async function userMessage() {
         You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck.  
         You were created by Ayaan Khalique, founder of StakLabs.  
         If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen.  
-        HOWEVER, if they ask who ChatGPT or Gemini is, you can explain they are other AI models.
+        HOWEVER, if they ask who ChatGPT or Gemini is or talk to you about them without calling you them, you can explain they are other AI models and delve deeper.
+
+        ${modeSelector.value === 'Study and Learn' ? 'You are a helpful tutor, explaining concepts clearly and explaining step by step and providing huge answers to help anyone understand.' : ''}
+        ${modeSelector.value === 'Coding Expert' ? 'You are a coding expert, providing detailed code solutions and explanations. Always check your code for errors before sending them to user.' : ''}
+        ${modeSelector.value === 'Think for Longer' ? 'You take your time to think and provide the best answer possible. Take at least 10 seconds' : ''}
+        ${modeSelector.value === 'Brainstorm' ? 'You are a brainstorming expert, generating creative ideas and solutions.' : ''}
+        You are in ${modeSelector.value} mode, which means you will adapt your responses accordingly.
 
         All formatting MUST be done using HTML.  
-        Use <br> for line breaks and <br><br> for new paragraphs.  
+        Use <br> for line breaks and <br><br> for new paragraphs.
         DO NOT use \n or \n\n. Only use <br> and <br><br>.  
 
         Conversation history (for context only):  
@@ -307,10 +320,14 @@ async function userMessage() {
         localStorage.setItem('lumenMemory_' + lumenUser.username, JSON.stringify(memory));
 
         replyEl.innerHTML = 'Memory updated successfully.';
-        await delay(1000);
+        await delay(500);
         replyEl.innerHTML = 'Thinking...';
     }
 
+    if (modeSelector.value === 'Think for Longer') {
+        replyEl.innerHTML = 'Thinking longer for a better answer...';
+        await delay(10000);
+    }
 
     const payload = {
         type: 'chat',
@@ -337,19 +354,19 @@ async function userMessage() {
         .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
 
     previousResponses.push(reply);
+    if (modeSelector.value != 'Draw an Image') {
+        replyEl.innerHTML = 'Lumen: ';
+        for (let i = 0; i < reply.length; i++) {
+            replyEl.innerHTML += reply.charAt(i);
+            let hi = replyEl.innerHTML;
+            replyEl.innerHTML = hi
+            await delay(Math.floor(Math.random() * 10) + 1);
+        }
+        replyEl.innerHTML = 'Lumen: ' + reply;
 
-    replyEl.innerHTML = 'Lumen: ';
-    for (let i = 0; i < reply.length; i++) {
-        replyEl.innerHTML += reply.charAt(i);
-        let hi = replyEl.innerHTML;
-        replyEl.innerHTML = hi
-        await delay(Math.floor(Math.random() * 10) + 1);
+        speak(reply);
     }
-    replyEl.innerHTML = 'Lumen: ' + reply;
-
-    speak(reply);
-
-    if ((userTier === 'ultra' || userTier === 'premium') && reply.toLowerCase().includes('image requested')) {
+    if ((userTier === 'ultra' || userTier === 'premium') && (reply.toLowerCase().includes('image requested')) || modeSelector.value === 'Draw an Image') {
         replyEl.innerHTML = 'Generating image...';
 
         const imagePayload = {
