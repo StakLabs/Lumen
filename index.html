@@ -16,6 +16,13 @@
     <div class="custom">
         <button id="set">Custom Instructions</button>
         <img src="new.png" id="newChat" onclick="window.location.reload();"></img>
+        <select id="modeSelector">
+            <option>Normal</option>
+            <option>Study and Learn</option>
+            <option>Coding Expert</option>
+            <option>Think for Longer</option>
+            <option>Brainstorm</option>
+        </select>
     </div>
     <div class="input-box-container">
     <input type="text" placeholder="Ask Anything..." id="userMessageInput" onkeydown="if(event.key==='Enter') userMessage()" autocomplete="off" />
