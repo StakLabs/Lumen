@@ -41,7 +41,7 @@ let users = [
       username: 'Emaan',
       email: 'emaan.khalique@gmail.com',
       password: 'nothing',
-      tier: 'premium'
+      tier: 'ultra'
    }
 ];
 /*
