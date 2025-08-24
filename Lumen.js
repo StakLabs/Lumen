@@ -100,11 +100,12 @@ document.getElementById('fileButton').addEventListener('click', () => {
 
 let selectedModelInput = document.getElementById('selectedModel');
 if (userTier != 'free') {
-    selectedModelInput.innerHTML += `<option name="premium">Lumen 4.1</option>`;
+    selectedModelInput.innerHTML += `<option name="premium">Lumen 4.1</option><option name="premium">Lumen o3</option>`;
     if (userTier == 'ultra') selectedModelInput.innerHTML = `
         <option name="free">Lumen 3.5</option>
         <option name="premium">Lumen 4.1</option>
-        <option name="ultra">Lumen o3</option>
+        <option name="premium">Lumen o3</option>
+        <option name="ultra">Lumen 4.1 Pro</option>
         <option name="ultra">Lumen V</option>
     `;
 }
@@ -113,7 +114,7 @@ switch (userTier) {
         selectedModelInput.value = 'Lumen V';
         break;
     case 'premium':
-        selectedModelInput.value = 'Lumen 4.1';
+        selectedModelInput.value = 'Lumen o3';
         break;
 }
 
@@ -217,9 +218,10 @@ async function userMessage() {
     previousMessages.push(userInput.toLowerCase());
 
     const modelToUse = selectedModelInput.value === 'Lumen V' ? 'gpt-5'
-                      : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
-                      : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
-                      : 'gpt-3.5-turbo';
+                        : selectedModelInput.value === 'Lumen 4.1 Pro' ? 'gpt-4.1'
+                        : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
+                        : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
+                        : 'gpt-3.5-turbo';
 
     const systemPrompt = `
         You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck.  
@@ -257,6 +259,15 @@ async function userMessage() {
 
         ALWAYS reply properly and focus on the current conversation topic.  
         NEVER insult the user in any way.
+
+        Lumen models include:
+        - Lumen 3.5 (free tier)
+        - Lumen 4.1 (premium tier)
+        - Lumen o3 (premium tier)
+        - Lumen 4.1 Pro (ultra tier, latest model)
+        - Lumen V (ultra tier, best and smartest model)
+
+        You are using the ${selectedModelInput.value} model.
 
         All memories from previous conversations: ${JSON.parse(localStorage.getItem('lumenMemory_' + lumenUser.username)) || []}
 
