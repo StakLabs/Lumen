@@ -1,3 +1,4 @@
+//
 var email
 
 var password
@@ -185,3 +186,4 @@ function membership() {
         clicked = false;
     }
 }
+
