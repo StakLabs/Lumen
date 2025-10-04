@@ -8,6 +8,7 @@ import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fetch from 'node-fetch';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 dotenv.config();
 const app = express();
@@ -25,7 +26,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Clients
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
 setInterval(() => {
@@ -50,6 +53,54 @@ app.post('/ask', async (req, res) => {
         const { prompt='', system='', model, userTier='free', file: fileUrl, type } = req.body;
         if (!model) return res.status(400).json({ error: 'Model not specified.' });
 
+        // 🔹 Gemini branch
+        if (model === 'gemini-2.5-pro') {
+            const geminiModel = genAI.getGenerativeModel({ model });
+            let parts = [];
+
+            if (prompt) parts.push(prompt);
+
+            if (fileUrl) {
+                const lowerUrl = fileUrl.toLowerCase();
+                const isImage = /\.(png|jpe?g|gif|bmp|webp)$/i.test(lowerUrl);
+                const isText = /\.(txt|md|csv|json|js|mjs|ts)$/i.test(lowerUrl);
+
+                if (isImage) {
+                    // Gemini supports inline base64 images
+                    try {
+                        const filename = fileUrl.split('/').pop();
+                        const localFilePath = path.join(__dirname, 'uploads', filename);
+                        const imgBuffer = await fs.readFile(localFilePath);
+                        const base64Img = imgBuffer.toString("base64");
+
+                        parts.push({
+                            inlineData: {
+                                data: base64Img,
+                                mimeType: "image/png"
+                            }
+                        });
+                    } catch {
+                        return res.status(500).json({ error: 'Failed to read uploaded image.' });
+                    }
+                } else if (isText) {
+                    try {
+                        const filename = fileUrl.split('/').pop();
+                        const localFilePath = path.join(__dirname, 'uploads', filename);
+                        const fileText = await fs.readFile(localFilePath, 'utf-8');
+                        parts.push(`----- FILE CONTENT (${filename}) -----\n${fileText}`);
+                    } catch {
+                        return res.status(500).json({ error: 'Failed to read uploaded file.' });
+                    }
+                } else {
+                    return res.status(400).json({ error: 'Unsupported file type for Gemini.' });
+                }
+            }
+
+            const result = await geminiModel.generateContent(parts);
+            return res.json({ response: result.response.text() });
+        }
+
+        // 🔹 Otherwise → OpenAI branch
         if (type === 'web_search_preview') {
             const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
             const response = await client.responses.create({
