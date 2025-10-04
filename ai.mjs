@@ -65,7 +65,7 @@ app.post('/ask', async (req, res) => {
         // 🔹 GEMINI branch
         if (modelToUse === 'gemini-2.5-pro') {
             try {
-                const geminiModel = genAI.getGenerativeModel({ modelToUse });
+                const geminiModel = genAI.getGenerativeModel({ model: modelToUse });
                 const messages = [];
 
                 if (prompt) messages.push({ type: 'text', text: prompt });
