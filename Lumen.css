@@ -117,7 +117,7 @@ body {
 /* Text input */
 #userMessageInput {
   flex-grow: 1;
-  width: 400px;
+  width: 600px;
   min-width: 0;
   border: none;
   border-radius: 10px;
@@ -149,6 +149,7 @@ body {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
   border: none;
   user-select: none;
+  width:150px
 }
 
 /* Button specific colors */
