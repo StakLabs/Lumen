@@ -66,46 +66,31 @@ app.post('/ask', async (req, res) => {
         if (modelToUse === 'gemini-2.5-pro') {
             try {
                 const geminiModel = genAI.getGenerativeModel({ model: modelToUse });
-                const messages = [];
-
-                if (prompt) messages.push({ type: 'text', text: prompt });
-
-                if (fileUrl) {                      
-                      const ai = new GoogleGenAI({});
-                      
-                      async function main() {
-                        const mimeType = mime.lookup(fileUrl) || 'application/octet-stream';
-                        const myfile = await ai.files.upload({
+        
+                let contentsArray = [];
+                if (prompt) contentsArray.push(prompt); // just plain string, no type
+        
+                if (fileUrl) {
+                    const ai = new GoogleGenAI({});
+                    const mimeType = mime.lookup(fileUrl) || 'application/octet-stream';
+                    const myfile = await ai.files.upload({
                         file: fileUrl,
                         config: { mimeType },
-                        });
-                      
-                        const response = await ai.models.generateContent({
-                          model: "gemini-2.5-pro",
-                          contents: createUserContent([
-                            createPartFromUri(myfile.uri, myfile.mimeType),
-                            prompt,
-                          ]),
-                        });
-                        console.log(response.text);
-                      }
-                      
-                      await main();
+                    });
+        
+                    contentsArray.push(createPartFromUri(myfile.uri, myfile.mimeType));
                 }
-
-                const result = await geminiModel.generateContent(messages);
-
-                let replyText = '';
-                if (result?.candidates?.length > 0) {
-                    replyText = result.candidates.map(c => c.content?.text).filter(Boolean).join('\n');
-                }
-
+        
+                const response = await geminiModel.generateContent({ contents: createUserContent(contentsArray) });
+        
+                const replyText = response?.candidates?.map(c => c.content?.text).filter(Boolean).join('\n');
                 return res.json({ response: replyText || 'Gemini generated no text.' });
             } catch (err) {
                 console.error('Gemini error:', err);
                 return res.status(500).json({ error: 'Gemini generation failed.' });
             }
         }
+        
 
         // 🔹 IMAGE generation for OpenAI
         if (type === 'image') {
