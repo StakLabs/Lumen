@@ -63,28 +63,39 @@ app.post('/ask', async (req, res) => {
   
       const modelToUse = findModel(model);
   
-      // 🔹 GEMINI branch
+      // 🔹 GEMINI branch (Lumen VI)
       if (modelToUse === 'gemini-2.5-pro') {
         try {
           const geminiModel = genAI.getGenerativeModel({ model: modelToUse });
-          let contentsArray = [];
+          const contentsArray = [];
   
           if (prompt) contentsArray.push(prompt);
   
           if (fileUrl) {
             const filename = fileUrl.split('/').pop();
             const localPath = path.join(__dirname, 'uploads', filename);
+  
+            // read file
+            const fileBuffer = await fs.readFile(localPath);
+            const stats = await fs.stat(localPath);
             const mimeType = mime.lookup(localPath) || 'application/octet-stream';
   
+            // upload to Gemini
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
             const uploadedFile = await ai.files.upload({
-              file: localPath, // <--- Use local path string, not Buffer
-              config: { displayName: filename, mimeType },
+              file: fileBuffer,
+              config: {
+                displayName: filename,
+                mimeType,
+                sizeBytes: stats.size
+              }
             });
   
-            contentsArray.push(createPartFromUri(uploadedFile.file.uri, mimeType));
+            // correctly push URI
+            contentsArray.push(createPartFromUri(uploadedFile.uri, mimeType));
           }
   
+          // fallback to avoid empty array
           if (contentsArray.length === 0) contentsArray.push("Please analyze this input.");
   
           const response = await geminiModel.generateContent({
@@ -96,6 +107,7 @@ app.post('/ask', async (req, res) => {
             'Gemini generated no text.';
   
           return res.json({ response: replyText });
+  
         } catch (err) {
           console.error('Gemini error:', err);
           return res.status(500).json({ error: err.message });
@@ -122,7 +134,7 @@ app.post('/ask', async (req, res) => {
       const chatModel = chatModelMap[model] || 'gpt-3.5-turbo';
   
       const messagesArray = [];
-      if (system.trim().length > 0) messagesArray.push({ role: 'system', content: system });
+      if (system.trim()) messagesArray.push({ role: 'system', content: system });
   
       let userMessageContent = prompt;
   
@@ -141,7 +153,7 @@ app.post('/ask', async (req, res) => {
           const fileText = await fs.readFile(localFilePath, 'utf-8');
           userMessageContent = `${prompt}\n\n----- FILE CONTENT (${filename}) -----\n${fileText}`;
         } else if (/\.(pdf|mp4|mp3|wav|avi|mov)$/i.test(lowerUrl)) {
-          // For PDF/video/audio, just send the URL
+          // for video/audio/pdf, just include URL
           userMessageContent = `${prompt}\n\n[Attached file: ${filename}]\nURL: ${fileUrl}`;
         } else {
           return res.status(400).json({ error: 'Unsupported file type.' });
@@ -157,7 +169,8 @@ app.post('/ask', async (req, res) => {
       console.error(err);
       res.status(500).json({ error: err.message });
     }
-  });
+});
+  
   
   
 
