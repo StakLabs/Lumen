@@ -1,3 +1,61 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import OpenAI from 'openai';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import fetch from 'node-fetch';
+import mime from 'mime-types';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+    GoogleGenAI,
+    createUserContent,
+    createPartFromUri,
+  } from "@google/genai";
+
+dotenv.config();
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const upload = multer({ dest: path.join(__dirname, 'uploads/') });
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(cors({
+    origin: ['https://www.timelypro.online', 'http://127.0.0.1:5500', 'https://staklabs.github.io'],
+    methods: ['GET','POST']
+}));
+app.use(express.json());
+
+// Clients
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
+setInterval(() => {
+    fetch(LUMEN_PING_URL).catch(() => {});
+}, 10 * 60 * 1000);
+
+function findModel(modelName) {
+    if (modelName === 'Lumen V') return 'gpt-5';
+    if (modelName === 'Lumen o3') return 'gpt-4o';
+    if (modelName === 'Lumen 4.1') return 'gpt-4.1-mini';
+    if (modelName === 'Lumen 4.1 Pro') return 'gpt-4.1';
+    if (modelName === 'Lumen VI') return 'gemini-2.5-pro';
+    return 'gpt-3.5-turbo';
+}
+
+app.post('/upload', upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    res.json({ success: true, url: fileUrl, filename: req.file.filename });
+});
+
 app.post('/ask', async (req, res) => {
     try {
         const { prompt = '', system = '', model, userTier = 'free', file: fileUrl, type } = req.body;
@@ -112,3 +170,7 @@ app.post('/ask', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+app.get('/ping', (req, res) => res.status(200).send('pong'));
+
+app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
