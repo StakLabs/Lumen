@@ -63,46 +63,46 @@ app.post('/ask', async (req, res) => {
         const modelToUse = findModel(model);
 
         // 🔹 GEMINI branch
+        // 🧠 GEMINI
         if (modelToUse === 'gemini-2.5-pro') {
             try {
-              const geminiModel = genAI.getGenerativeModel({ model: modelToUse });
-              let contentsArray = [];
-          
-              if (prompt) contentsArray.push(prompt);
-          
-              // 🧩 Handle file upload (download + send to Gemini)
-              if (fileUrl) {
-                const filename = fileUrl.split('/').pop();
-                const localPath = path.join(__dirname, 'uploads', filename);
-          
-                const fileBuffer = await fs.readFile(localPath);
-                const mimeType = mime.lookup(localPath) || 'application/octet-stream';
-          
-                // Upload the *actual file bytes* to Gemini
-                const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            const geminiModel = genAI.getGenerativeModel({ model: modelToUse });
+            let contentsArray = [];
+            if (prompt) contentsArray.push(prompt);
+        
+            // If file attached
+            if (req.file) {
+                const mimeType = req.file.mimetype || 'application/octet-stream';
+                const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+        
+                // 🩵 FIX: include sizeBytes when uploading
                 const uploadedFile = await ai.files.upload({
-                  file: fileBuffer,
-                  config: { mimeType, displayName: filename },
+                file: req.file.buffer,
+                config: {
+                    mimeType,
+                    displayName: req.file.originalname,
+                    sizeBytes: req.file.size, // 👈 this fixes the 400 Bad Request
+                },
                 });
-          
+        
                 contentsArray.push(createPartFromUri(uploadedFile.file.uri, mimeType));
-              }
-          
-              // ✅ Proper structure for Gemini
-              const response = await geminiModel.generateContent({
+            }
+        
+            const response = await geminiModel.generateContent({
                 contents: [createUserContent(contentsArray)],
-              });
-          
-              const replyText =
+            });
+        
+            const replyText =
                 response?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
                 'Gemini generated no text.';
-          
-              return res.json({ response: replyText });
+        
+            return res.json({ response: replyText });
             } catch (err) {
-              console.error('Gemini error:', err);
-              return res.status(500).json({ error: err.message });
+            console.error('Gemini error:', err);
+            return res.status(500).json({ error: err.message });
             }
-          }
+        }
+  
 
         // 🔹 IMAGE generation for OpenAI
         if (type === 'image') {
@@ -160,4 +160,4 @@ app.post('/ask', async (req, res) => {
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 
-app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));s
