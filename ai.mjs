@@ -65,32 +65,44 @@ app.post('/ask', async (req, res) => {
         // 🔹 GEMINI branch
         if (modelToUse === 'gemini-2.5-pro') {
             try {
-                const geminiModel = genAI.getGenerativeModel({ model: modelToUse });
-        
-                let contentsArray = [];
-                if (prompt) contentsArray.push(prompt); // just plain string, no type
-        
-                if (fileUrl) {
-                    const ai = new GoogleGenAI({});
-                    const mimeType = mime.lookup(fileUrl) || 'application/octet-stream';
-                    const myfile = await ai.files.upload({
-                        file: fileUrl,
-                        config: { mimeType },
-                    });
-        
-                    contentsArray.push(createPartFromUri(myfile.uri, myfile.mimeType));
-                }
-        
-                const response = await geminiModel.generateContent({ contents: createUserContent(contentsArray) });
-        
-                const replyText = response?.candidates?.map(c => c.content?.text).filter(Boolean).join('\n');
-                return res.json({ response: replyText || 'Gemini generated no text.' });
+              const geminiModel = genAI.getGenerativeModel({ model: modelToUse });
+              let contentsArray = [];
+          
+              if (prompt) contentsArray.push(prompt);
+          
+              // 🧩 Handle file upload (download + send to Gemini)
+              if (fileUrl) {
+                const filename = fileUrl.split('/').pop();
+                const localPath = path.join(__dirname, 'uploads', filename);
+          
+                const fileBuffer = await fs.readFile(localPath);
+                const mimeType = mime.lookup(localPath) || 'application/octet-stream';
+          
+                // Upload the *actual file bytes* to Gemini
+                const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+                const uploadedFile = await ai.files.upload({
+                  file: fileBuffer,
+                  config: { mimeType, displayName: filename },
+                });
+          
+                contentsArray.push(createPartFromUri(uploadedFile.file.uri, mimeType));
+              }
+          
+              // ✅ Proper structure for Gemini
+              const response = await geminiModel.generateContent({
+                contents: [createUserContent(contentsArray)],
+              });
+          
+              const replyText =
+                response?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
+                'Gemini generated no text.';
+          
+              return res.json({ response: replyText });
             } catch (err) {
-                console.error('Gemini error:', err);
-                return res.status(500).json({ error: 'Gemini generation failed.' });
+              console.error('Gemini error:', err);
+              return res.status(500).json({ error: err.message });
             }
-        }
-        
+          }
 
         // 🔹 IMAGE generation for OpenAI
         if (type === 'image') {
