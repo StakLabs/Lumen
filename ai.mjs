@@ -60,9 +60,9 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                     config: { 
                         displayName: req.file.originalname, 
                         mimeType: req.file.mimetype || 'application/octet-stream',
-                        sizeBytes: req.file.size
+                        sizeBytes: req.file.buffer.length  // use buffer length in bytes
                     }
-                });
+                });                
                 contentsArray.push(createPartFromUri(uploadedFile.uri, req.file.mimetype));
             }
 
