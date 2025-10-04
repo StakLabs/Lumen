@@ -101,15 +101,21 @@ document.getElementById('fileButton').addEventListener('click', () => {
 let selectedModelInput = document.getElementById('selectedModel');
 if (userTier != 'free') {
     selectedModelInput.innerHTML += `<option name="premium">Lumen 4.1</option><option name="premium">Lumen o3</option>`;
-    if (userTier == 'ultra') selectedModelInput.innerHTML = `
+    if (userTier == 'ultra' || 'loyal') selectedModelInput.innerHTML = `
         <option name="free">Lumen 3.5</option>
         <option name="premium">Lumen 4.1</option>
         <option name="premium">Lumen o3</option>
         <option name="ultra">Lumen 4.1 Pro</option>
         <option name="ultra">Lumen V</option>
     `;
+    if (userTier == 'loyal') {
+        selectedModelInput.innerHTML = selectedModelInput.innerHTML += `<option name="loyal">Lumen VI</option>`;
+    }
 }
 switch (userTier) {
+    case 'loyal':
+        selectedModelInput.value = 'Lumen VI';
+        break;
     case 'ultra':
         selectedModelInput.value = 'Lumen V';
         break;
@@ -119,7 +125,8 @@ switch (userTier) {
 }
 
 if ((userTier == 'premium' || userTier == 'free') && trials < 10) {
-    selectedModelInput.value = 'Lumen V'}
+    selectedModelInput.value = 'Lumen VI';
+}
 
 let modeSelector = document.getElementById('modeSelector');
 if (userTier !== 'free') {
@@ -221,6 +228,7 @@ async function userMessage() {
                         : selectedModelInput.value === 'Lumen 4.1 Pro' ? 'gpt-4.1'
                         : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
                         : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
+                        : selectedModelInput.value === 'Lumen VI' ? 'gemini-2.5-pro'
                         : 'gpt-3.5-turbo';
 
     const systemPrompt = `
@@ -266,6 +274,7 @@ async function userMessage() {
         - Lumen o3 (premium tier)
         - Lumen 4.1 Pro (ultra tier, latest model)
         - Lumen V (ultra tier, best and smartest model)
+        - Lumen VI (loyal tier, exclusive model, even better than Lumen V, has file upload capabilities)
 
         You are using the ${selectedModelInput.value} model.
 
@@ -366,13 +375,6 @@ async function userMessage() {
 
     previousResponses.push(reply);
     if (modeSelector.value != 'Draw an Image') {
-        replyEl.innerHTML = 'Lumen: ';
-        for (let i = 0; i < reply.length; i++) {
-            replyEl.innerHTML += reply.charAt(i);
-            let hi = replyEl.innerHTML;
-            replyEl.innerHTML = hi
-            await delay(Math.floor(Math.random() * 10) + 1);
-        }
         replyEl.innerHTML = 'Lumen: ' + reply;
 
         speak(reply);
