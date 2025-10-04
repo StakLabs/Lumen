@@ -34,7 +34,7 @@ voiceBtn.addEventListener('click', () => {
     if (speechMode) startListening();
     else recognition.stop();
 });
-//
+
 function startListening() {
     if (!listening && speechMode) {
         recognition.start();
@@ -101,7 +101,7 @@ document.getElementById('fileButton').addEventListener('click', () => {
 let selectedModelInput = document.getElementById('selectedModel');
 if (userTier != 'free') {
     selectedModelInput.innerHTML += `<option name="premium">Lumen 4.1</option><option name="premium">Lumen o3</option>`;
-    if (userTier == 'ultra' || 'loyal') selectedModelInput.innerHTML = `
+    if (userTier == 'ultra' || userTier == 'loyal') selectedModelInput.innerHTML = `
         <option name="free">Lumen 3.5</option>
         <option name="premium">Lumen 4.1</option>
         <option name="premium">Lumen o3</option>
@@ -414,4 +414,3 @@ async function userMessage() {
 function delay(ms) {
     return new Promise(res => setTimeout(res, ms));
 }
-
