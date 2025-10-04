@@ -34,7 +34,7 @@ voiceBtn.addEventListener('click', () => {
     if (speechMode) startListening();
     else recognition.stop();
 });
-
+//
 function startListening() {
     if (!listening && speechMode) {
         recognition.start();
@@ -414,3 +414,4 @@ async function userMessage() {
 function delay(ms) {
     return new Promise(res => setTimeout(res, ms));
 }
+
