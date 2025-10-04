@@ -1,4 +1,3 @@
-//
 var email
 
 var password
@@ -18,7 +17,7 @@ let users = [
       username: 'Ayaan',
       email: 'ayaan.khalique3@gmail.com',
       password: 'sd',
-      tier: 'ultra'
+      tier: 'loyal'
     },
     {
       username: 'Khalique',
@@ -42,7 +41,7 @@ let users = [
       username: 'Emaan',
       email: 'emaan.khalique@gmail.com',
       password: 'nothing',
-      tier: 'ultra'
+      tier: 'premium'
    }
 ];
 /*
@@ -186,4 +185,3 @@ function membership() {
         clicked = false;
     }
 }
-
