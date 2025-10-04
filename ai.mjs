@@ -8,7 +8,13 @@ import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fetch from 'node-fetch';
+import mime from 'mime-types';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+    GoogleGenAI,
+    createUserContent,
+    createPartFromUri,
+  } from "@google/genai";
 
 dotenv.config();
 const app = express();
@@ -54,36 +60,37 @@ app.post('/ask', async (req, res) => {
     try {
         const { prompt = '', system = '', model, userTier = 'free', file: fileUrl, type } = req.body;
         if (!model) return res.status(400).json({ error: 'Model not specified.' });
+        const modelToUse = findModel(model);
 
         // 🔹 GEMINI branch
-        if (model === 'gemini-2.5-pro') {
+        if (modelToUse === 'gemini-2.5-pro') {
             try {
-                const geminiModel = genAI.getGenerativeModel({ model });
+                const geminiModel = genAI.getGenerativeModel({ modelToUse });
                 const messages = [];
 
                 if (prompt) messages.push({ type: 'text', text: prompt });
 
-                if (fileUrl) {
-                    const filename = fileUrl.split('/').pop();
-                    const localFilePath = path.join(__dirname, 'uploads', filename);
-                    const lowerUrl = fileUrl.toLowerCase();
-
-                    if (/\.(png|jpe?g|gif|bmp|webp)$/i.test(lowerUrl)) {
-                        const imgBuffer = await fs.readFile(localFilePath);
-                        const base64Img = imgBuffer.toString("base64");
-                        messages.push({
-                            type: 'image',
-                            image: {
-                                mimeType: 'image/png',
-                                data: base64Img
-                            }
+                if (fileUrl) {                      
+                      const ai = new GoogleGenAI({});
+                      
+                      async function main() {
+                        const mimeType = mime.lookup(fileUrl) || 'application/octet-stream';
+                        const myfile = await ai.files.upload({
+                        file: fileUrl,
+                        config: { mimeType },
                         });
-                    } else if (/\.(txt|md|csv|json|js|mjs|ts)$/i.test(lowerUrl)) {
-                        const fileText = await fs.readFile(localFilePath, 'utf-8');
-                        messages.push({ type: 'text', text: `----- FILE CONTENT (${filename}) -----\n${fileText}` });
-                    } else {
-                        return res.status(400).json({ error: 'Unsupported file type for Gemini.' });
-                    }
+                      
+                        const response = await ai.models.generateContent({
+                          model: "gemini-2.5-flash",
+                          contents: createUserContent([
+                            createPartFromUri(myfile.uri, myfile.mimeType),
+                            prompt,
+                          ]),
+                        });
+                        console.log(response.text);
+                      }
+                      
+                      await main();
                 }
 
                 const result = await geminiModel.generateContent(messages);
