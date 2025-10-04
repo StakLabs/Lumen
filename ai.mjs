@@ -75,23 +75,27 @@ app.post('/ask', async (req, res) => {
           if (fileUrl) {
             const filename = fileUrl.split('/').pop();
             const localPath = path.join(__dirname, 'uploads', filename);
-  
+          
+            // Read the actual file buffer
             const fileBuffer = await fs.readFile(localPath);
-            const stats = await fs.stat(localPath); // <-- file size
+            const stats = await fs.stat(localPath);
             const mimeType = mime.lookup(localPath) || 'application/octet-stream';
-  
+          
+            // Upload the file directly to Gemini
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
             const uploadedFile = await ai.files.upload({
-              file: fileBuffer,
+              file: fileBuffer,      // ✅ must be Buffer
               config: {
                 displayName: filename,
                 mimeType,
-                sizeBytes: stats.size, // ✅ must include
+                sizeBytes: stats.size // ✅ must be number
               },
             });
-  
-            contentsArray.push(createPartFromUri(uploadedFile.uri, mimeType));
+          
+            // Push the uploaded file part to Gemini
+            contentsArray.push(createPartFromUri(uploadedFile.file.uri, mimeType));
           }
+          
   
           // Avoid empty contents
           if (contentsArray.length === 0) contentsArray.push("Please analyze this input.");
