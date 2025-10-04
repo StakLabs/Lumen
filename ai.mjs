@@ -39,6 +39,8 @@ function findModel(modelName) {
     if (modelName === 'Lumen V') return 'gpt-5';
     if (modelName === 'Lumen o3') return 'gpt-4o';
     if (modelName === 'Lumen 4.1') return 'gpt-4.1-mini';
+    if (modelName === 'Lumen 4.1 Pro') return 'gpt-4.1';
+    if (modelName === 'Lumen VI') return 'gemini-2.5-pro';
     return 'gpt-3.5-turbo';
 }
 
@@ -54,7 +56,7 @@ app.post('/ask', async (req, res) => {
         if (!model) return res.status(400).json({ error: 'Model not specified.' });
 
         // 🔹 Gemini branch
-        if (model === 'gemini-2.5-pro') {
+        if (model == 'gemini-2.5-pro') {
             const geminiModel = genAI.getGenerativeModel({ model });
             let parts = [];
 
