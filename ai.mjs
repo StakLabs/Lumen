@@ -6,8 +6,7 @@ import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fetch from 'node-fetch';
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GoogleGenAI, createUserContent, createPartFromUri } from "@google/genai";
+import { GoogleGenAI, createUserContent } from "@google/genai";
 
 dotenv.config();
 const app = express();
@@ -25,7 +24,7 @@ app.use(cors({
 app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
 setInterval(() => { fetch(LUMEN_PING_URL).catch(() => {}); }, 10 * 60 * 1000);
@@ -46,10 +45,8 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
         const modelToUse = findModel(model);
 
-        // GEMINI branch (Lumen VI)
         if (modelToUse === 'gemini-2.5-pro') {
-            const geminiModel = genAI.getGenerativeModel({ model: modelToUse });
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            const modelInstance = ai.models.get({ model: modelToUse });
 
             const contentsArray = [];
             if (prompt) contentsArray.push(prompt);
@@ -57,26 +54,25 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             if (req.file) {
                 const uploadedFile = await ai.files.upload({
                     file: req.file.buffer,
-                    config: { 
-                        displayName: req.file.originalname, 
-                        mimeType: req.file.mimetype || 'application/octet-stream',
-                        sizeBytes: req.file.buffer.length  // use buffer length in bytes
-                    }
-                });                
-                contentsArray.push(createPartFromUri(uploadedFile.uri, req.file.mimetype));
+                    mimeType: req.file.mimetype || 'application/octet-stream',
+                    displayName: req.file.originalname, 
+                });
+                
+                contentsArray.push(uploadedFile);
             }
 
-            if (contentsArray.length === 0) contentsArray.push("Please analyze this input.");
+            if (contentsArray.length === 0) return res.status(400).json({ error: 'Please provide a prompt or a file for Gemini.' });
 
-            const response = await geminiModel.generateContent({
-                contents: [createUserContent(contentsArray)]
+            const userMessageContent = createUserContent(contentsArray);
+
+            const response = await modelInstance.generateContent({
+                contents: [userMessageContent]
             });
 
-            const replyText = response?.response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Gemini generated no text.';
+            const replyText = response?.text || 'Gemini generated no text.';
             return res.json({ response: replyText });
         }
 
-        // IMAGE generation for OpenAI
         if (type === 'image') {
             if (!['premium', 'ultra'].includes(userTier)) return res.status(403).json({ error: 'Image generation only for premium users.' });
             const dalleModel = (['Lumen o3', 'Lumen V'].includes(model)) ? 'dall-e-3' : 'dall-e-2';
@@ -85,7 +81,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             return res.json(response);
         }
 
-        // CHAT for OpenAI
         const chatModelMap = {
             'Lumen V': 'gpt-5',
             'Lumen o3': 'gpt-4o',
