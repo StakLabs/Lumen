@@ -56,51 +56,53 @@ app.post('/ask', async (req, res) => {
         if (!model) return res.status(400).json({ error: 'Model not specified.' });
 
         // 🔹 Gemini branch
-        if (model == 'gemini-2.5-pro') {
-            const geminiModel = genAI.getGenerativeModel({ model });
-            let parts = [];
-
-            if (prompt) parts.push(prompt);
-
-            if (fileUrl) {
-                const lowerUrl = fileUrl.toLowerCase();
-                const isImage = /\.(png|jpe?g|gif|bmp|webp)$/i.test(lowerUrl);
-                const isText = /\.(txt|md|csv|json|js|mjs|ts)$/i.test(lowerUrl);
-
-                if (isImage) {
-                    // Gemini supports inline base64 images
-                    try {
-                        const filename = fileUrl.split('/').pop();
-                        const localFilePath = path.join(__dirname, 'uploads', filename);
+        if (model === 'gemini-2.5-pro') {
+            try {
+                const geminiModel = genAI.getGenerativeModel({ model });
+                const messages = [];
+        
+                // Prompt first
+                if (prompt) messages.push({ type: 'text', text: prompt });
+        
+                // File handling
+                if (fileUrl) {
+                    const filename = fileUrl.split('/').pop();
+                    const localFilePath = path.join(__dirname, 'uploads', filename);
+                    const lowerUrl = fileUrl.toLowerCase();
+        
+                    if (/\.(png|jpe?g|gif|bmp|webp)$/i.test(lowerUrl)) {
                         const imgBuffer = await fs.readFile(localFilePath);
                         const base64Img = imgBuffer.toString("base64");
-
-                        parts.push({
-                            inlineData: {
-                                data: base64Img,
-                                mimeType: "image/png"
+                        messages.push({
+                            type: 'image',
+                            image: {
+                                mimeType: 'image/png',
+                                data: base64Img
                             }
                         });
-                    } catch {
-                        return res.status(500).json({ error: 'Failed to read uploaded image.' });
-                    }
-                } else if (isText) {
-                    try {
-                        const filename = fileUrl.split('/').pop();
-                        const localFilePath = path.join(__dirname, 'uploads', filename);
+                    } else if (/\.(txt|md|csv|json|js|mjs|ts)$/i.test(lowerUrl)) {
                         const fileText = await fs.readFile(localFilePath, 'utf-8');
-                        parts.push(`----- FILE CONTENT (${filename}) -----\n${fileText}`);
-                    } catch {
-                        return res.status(500).json({ error: 'Failed to read uploaded file.' });
+                        messages.push({ type: 'text', text: `----- FILE CONTENT (${filename}) -----\n${fileText}` });
+                    } else {
+                        return res.status(400).json({ error: 'Unsupported file type for Gemini.' });
                     }
-                } else {
-                    return res.status(400).json({ error: 'Unsupported file type for Gemini.' });
                 }
+        
+                const result = await geminiModel.generateContent(messages);
+        
+                // Extract text safely
+                let replyText = '';
+                if (result?.candidates?.length > 0) {
+                    replyText = result.candidates.map(c => c.content?.text).filter(Boolean).join('\n');
+                }
+        
+                return res.json({ response: replyText || 'Gemini generated no text.' });
+            } catch (err) {
+                console.error('Gemini error:', err);
+                return res.status(500).json({ error: 'Gemini generation failed.' });
             }
-
-            const result = await geminiModel.generateContent(parts);
-            return res.json({ response: result.response.text() });
         }
+        
 
         // 🔹 Otherwise → OpenAI branch
         if (type === 'web_search_preview') {
@@ -135,7 +137,7 @@ app.post('/ask', async (req, res) => {
             const isText = /\.(txt|md|csv|json|js|mjs|ts)$/i.test(lowerUrl);
 
             if (isImage) {
-                if (!['gpt-4o','gpt-5'].includes(chatModel)) return res.status(400).json({ error: 'Image analysis requires Lumen o3/V.' });
+                if (!['gpt-4o','gpt-5'].includes(chatModel)) return res.status(400).json({ error: 'Image analysis requires Lumen VI.' });
                 userMessageContent = [
                     { type: 'text', text: prompt || 'Describe this image.' },
                     { type: 'image_url', image_url: { url: fileUrl } }
