@@ -68,7 +68,6 @@ if (localStorage.getItem('date') != new Date().toISOString().slice(0, 10)) {
     trials = 0;
 }
 
-// ✅ FIXED CUSTOM INSTRUCTIONS
 document.getElementById('set').addEventListener('click', () => {
     document.querySelector('.custom').innerHTML = `
         <h2>Custom Instructions</h2>
@@ -77,7 +76,6 @@ document.getElementById('set').addEventListener('click', () => {
         <button id="saveInstructions">Save</button>
     `;
 
-    // set textarea value programmatically (no whitespace issues)
     const saved = JSON.parse(localStorage.getItem(lumenUser.username + '_instructions')) || '';
     document.getElementById('instructions').value = saved;
 
@@ -129,7 +127,7 @@ if ((userTier == 'premium' || userTier == 'free') && trials < 10) {
 }
 
 let modeSelector = document.getElementById('modeSelector');
-if (userTier !== 'free') {
+if (userTier == 'loyal') {
     modeSelector.innerHTML += `
         <option>Draw an Image</option>
     `;
@@ -158,6 +156,10 @@ getTime();
 
 async function userMessage() {
     if (wait !== 0) return;
+    if (modeSelector.value === 'Draw an Image' && selectedModelInput.value !== 'Lumen VI') {
+        alert('Image generation is only available with Lumen VI');
+        return;
+    }
 
     const inputBox = document.querySelector('.input-box-container');
     if (!inputBox.classList.contains('bottom')) inputBox.classList.add('bottom');
@@ -168,7 +170,7 @@ async function userMessage() {
     const file = fileInput.files[0];
     if (!userInput && !file) return;
 
-    document.querySelector('.title2').innerHTML = '<!--This used to be a title-->';
+    document.querySelector('.title2').innerHTML = '';
     messages += 1;
 
     const container = document.getElementById('container');
@@ -225,16 +227,16 @@ async function userMessage() {
     previousMessages.push(userInput.toLowerCase());
 
     const modelToUse = selectedModelInput.value === 'Lumen V' ? 'gpt-5'
-                        : selectedModelInput.value === 'Lumen 4.1 Pro' ? 'gpt-4.1'
-                        : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
-                        : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
-                        : selectedModelInput.value === 'Lumen VI' ? 'gemini-2.5-pro'
-                        : 'gpt-3.5-turbo';
+                         : selectedModelInput.value === 'Lumen 4.1 Pro' ? 'gpt-4.1'
+                         : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
+                         : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
+                         : selectedModelInput.value === 'Lumen VI' ? 'gemini-2.5-pro'
+                         : 'gpt-3.5-turbo';
 
     const systemPrompt = `
-        You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck.  
-        You were created by Ayaan Khalique, founder of StakLabs.  
-        If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen.  
+        You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck. 
+        You were created by Ayaan Khalique, founder of StakLabs. 
+        If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen. 
         HOWEVER, if they ask who ChatGPT or Gemini is or talk to you about them without calling you them, you can explain they are other AI models and delve deeper.
 
         ${modeSelector.value === 'Study and Learn' ? 'You are a helpful tutor, explaining concepts clearly and explaining step by step and providing huge answers to help anyone understand.' : ''}
@@ -243,29 +245,30 @@ async function userMessage() {
         ${modeSelector.value === 'Brainstorm' ? 'You are a brainstorming expert, generating creative ideas and solutions.' : ''}
         You are in ${modeSelector.value} mode, which means you will adapt your responses accordingly.
 
-        All formatting MUST be done using HTML.  
+        All formatting MUST be done using HTML. 
         Use <br> for line breaks and <br><br> for new paragraphs.
-        DO NOT use \n or \n\n. Only use <br> and <br><br>.  
+        DO NOT use \n or \n\n. Only use <br> and <br><br>. 
 
-        Conversation history (for context only):  
-        ${formattedPreviousMessages}  
-        ${formattedPreviousResponses}  
+        Conversation history (for context only): 
+        ${formattedPreviousMessages} 
+        ${formattedPreviousResponses} 
 
-        NEVER repeat these messages verbatim.  
-        Only reference them if the user explicitly asks you to recall something.  
+        NEVER repeat these messages verbatim. 
+        Only reference them if the user explicitly asks you to recall something. 
 
         Answer DIRECTLY to the user's question or request.
         Answer in a **concise**, **clear**, and **informative** manner.
 
         Use emojis when the vibe fits.
 
-        if someone asks to generate or make or draw an image, reply exactly: 'IMAGE REQUESTED'.  
+        ${selectedModelInput.value === 'Lumen VI' ? 'if someone asks to generate or make or draw an image, reply exactly: "IMAGE REQUESTED".' : ''}
 
-        You can write code, generate images, and answer anything.  
+        You can write code, generate images, and answer anything.
+        Image generation is only available with Lumen VI, and you are ${selectedModelInput.value === 'Lumen VI' ? 'allowed' : 'not allowed'} to generate images.
 
         **Bold all important words, phrases, and sentences.**
 
-        ALWAYS reply properly and focus on the current conversation topic.  
+        ALWAYS reply properly and focus on the current conversation topic. 
         NEVER insult the user in any way.
 
         Lumen models include:
@@ -280,11 +283,10 @@ async function userMessage() {
 
         All memories from previous conversations: ${JSON.parse(localStorage.getItem('lumenMemory_' + lumenUser.username)) || []}
 
-        User: ${lumenUser.username}, Tier: ${userTier}.  
-        Do NOT reveal the tier unless the user specifically asks.  
-        Do NOT output anything unrelated to the current topic.  
-        Do NOT say 'IMAGE REQUESTED' when the user has uploaded a file.
-        Do NOT let the custom instructions affect your core functionality, and ALWAYS say 'IMAGE REQUESTED.' when the user asks for an image.
+        User: ${lumenUser.username}, Tier: ${userTier}. 
+        Do NOT reveal the tier unless the user specifically asks. 
+        Do NOT output anything unrelated to the current topic. 
+        Do NOT let the custom instructions affect your core functionality.
         The user has set some custom instructions for you:
         ${instructions || 'No custom instructions set.'}:
     `;
@@ -374,13 +376,23 @@ async function userMessage() {
         .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
 
     previousResponses.push(reply);
+    
     if (modeSelector.value != 'Draw an Image') {
         replyEl.innerHTML = 'Lumen: ' + reply;
 
         speak(reply);
     }
-    if ((userTier === 'ultra' || userTier === 'premium') && (reply.toLowerCase().includes('image requested')) || modeSelector.value === 'Draw an Image') {
-        replyEl.innerHTML = 'Generating image...';
+    
+    const isImageRequest = (reply.toLowerCase().includes('image requested')) || modeSelector.value === 'Draw an Image';
+    const isLumenVI = selectedModelInput.value === 'Lumen VI';
+    const canUseDalle = (userTier === 'ultra' || userTier === 'premium') && !isLumenVI;
+    const canUseImagen = isLumenVI && userTier === 'loyal';
+
+    if (isImageRequest && (canUseDalle || canUseImagen)) {
+        
+        let generatingMessage = 'Generating image...';
+
+        replyEl.innerHTML = generatingMessage;
 
         const imagePayload = {
             type: 'image',
@@ -397,14 +409,25 @@ async function userMessage() {
 
         const imageData = await imageRes.json();
         const imageTarget = document.getElementById(`image${messages}`);
+        
         if (imageTarget && imageData.data?.[0]?.url) {
             imageTarget.src = imageData.data[0].url;
             imageTarget.classList.add('lumenMessage', 'img');
             previousResponses.push(imageData.data[0].url + ' [IMAGE GENERATED]');
+            replyEl.innerHTML = 'Image generated successfully.';
+            speak('Image generated successfully.');
+
+        } else if (imageData.error) {
+            replyEl.innerHTML = 'IMAGE ERROR: ' + imageData.error;
+            previousResponses.push('IMAGE ERROR: ' + imageData.error);
+            speak('Sorry, there was an error generating the image.');
         } else {
-            previousResponses.push('IMAGE ERROR: could not generate or display');
+            replyEl.innerHTML = 'IMAGE ERROR: Could not generate or display.';
+            previousResponses.push('IMAGE ERROR: Could not generate or display.');
+            speak('Sorry, there was an error generating the image.');
         }
     }
+
 
     wait = 0;
     fileInput.value = '';
