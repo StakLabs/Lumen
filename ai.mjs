@@ -38,18 +38,10 @@ function findModel(modelName) {
     return 'gpt-3.5-turbo';
 }
 
-/**
- * Determines the MIME type based on the filename extension if req.file.mimetype is missing.
- * @param {string} fileName 
- * @param {string | undefined} detectedMimeType 
- * @returns {string} The determined MIME type.
- */
 function getMimeType(fileName, detectedMimeType) {
-    // 1. Use Multer's detected MIME type if available.
     if (detectedMimeType) {
         return String(detectedMimeType);
     }
-    // 2. Fallback to extension check.
     const ext = fileName.split('.').pop().toLowerCase();
     switch (ext) {
         case 'png': return 'image/png';
@@ -63,7 +55,6 @@ function getMimeType(fileName, detectedMimeType) {
         case 'txt': return 'text/plain';
         case 'csv': return 'text/csv';
         case 'json': return 'application/json';
-        // 3. Last resort fallback.
         default: return 'application/octet-stream';
     }
 }
@@ -76,17 +67,12 @@ app.post('/ask', upload.single('file'), async (req, res) => {
         const modelToUse = findModel(model);
 
         if (modelToUse === 'gemini-2.5-pro') {
-            const modelInstance = ai.models.get({ model: modelToUse });
-
             const contentsArray = [];
             if (prompt) contentsArray.push(prompt);
 
             if (req.file) {
-                // Determine the most reliable MIME type using the utility
                 const mimeType = getMimeType(req.file.originalname, req.file.mimetype);
                 
-                // *** CRITICAL CHANGE: Pass the file buffer directly to the file object ***
-                // This ensures the SDK receives the file and MIME type together explicitly.
                 const filePart = {
                     inlineData: {
                         data: req.file.buffer.toString('base64'),
@@ -95,7 +81,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                     displayName: req.file.originalname,
                 };
                 
-                // Add the file part directly to the contents array instead of using ai.files.upload
                 contentsArray.push(filePart);
             }
 
@@ -103,16 +88,15 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
             const userMessageContent = createUserContent(contentsArray);
 
-            const response = await modelInstance.generateContent({
+            const response = await ai.generateContent({
+                model: modelToUse,
                 contents: [userMessageContent]
             });
 
             const replyText = response?.text || 'Gemini generated no text.';
             return res.json({ response: replyText });
         }
-// The rest of the code remains the same...
-// ...
-// ...
+
         if (type === 'image') {
             if (!['premium', 'ultra'].includes(userTier)) return res.status(403).json({ error: 'Image generation only for premium users.' });
             const dalleModel = (['Lumen o3', 'Lumen V'].includes(model)) ? 'dall-e-3' : 'dall-e-2';
@@ -136,7 +120,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
         let userMessageContent = prompt;
         if (req.file) {
             const filename = req.file.originalname.toLowerCase();
-            // Note: The file content is only read for text-based files here for OpenAI models
             if (/\.(txt|md|csv|json|js|mjs|ts)$/i.test(filename)) {
                 userMessageContent = `${prompt}\n\n----- FILE CONTENT (${req.file.originalname}) -----\n${req.file.buffer.toString('utf-8')}`;
             } else if (/\.(pdf|mp4|mp3|wav|avi|mov)$/i.test(filename)) {
