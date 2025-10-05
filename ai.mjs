@@ -38,6 +38,33 @@ function findModel(modelName) {
     return 'gpt-3.5-turbo';
 }
 
+/**
+ * Determines the MIME type based on the filename extension if req.file.mimetype is missing.
+ * @param {string} fileName 
+ * @param {string | undefined} detectedMimeType 
+ * @returns {string} The determined MIME type.
+ */
+function getMimeType(fileName, detectedMimeType) {
+    if (detectedMimeType) {
+        return String(detectedMimeType);
+    }
+    const ext = fileName.split('.').pop().toLowerCase();
+    switch (ext) {
+        case 'png': return 'image/png';
+        case 'jpg':
+        case 'jpeg': return 'image/jpeg';
+        case 'gif': return 'image/gif';
+        case 'webp': return 'image/webp';
+        case 'pdf': return 'application/pdf';
+        case 'mp3': return 'audio/mp3';
+        case 'mp4': return 'video/mp4';
+        case 'txt': return 'text/plain';
+        case 'csv': return 'text/csv';
+        case 'json': return 'application/json';
+        default: return 'application/octet-stream';
+    }
+}
+
 app.post('/ask', upload.single('file'), async (req, res) => {
     try {
         const { prompt = '', system = '', model, userTier = 'free', type } = req.body;
@@ -52,14 +79,16 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             if (prompt) contentsArray.push(prompt);
 
             if (req.file) {
-                // *** FINAL FIX: Guarantee application/pdf MIME Type and force it to be a string ***
-                const mimeType = req.file.mimetype && req.file.mimetype.length > 0
-                                ? req.file.mimetype
-                                : 'application/octet-stream';
+                // *** CRITICAL FIX: Use a utility function to determine MIME type reliably ***
+                const mimeType = getMimeType(req.file.originalname, req.file.mimetype);
+                
+                if (mimeType === 'application/octet-stream') {
+                     console.warn(`Warning: Could not reliably determine MIME type for ${req.file.originalname}. Falling back.`);
+                }
                 
                 const uploadedFile = await ai.files.upload({
                     file: req.file.buffer,
-                    mimeType: String(mimeType), 
+                    mimeType: mimeType, 
                     displayName: req.file.originalname, 
                 });
                 
@@ -101,6 +130,7 @@ app.post('/ask', upload.single('file'), async (req, res) => {
         let userMessageContent = prompt;
         if (req.file) {
             const filename = req.file.originalname.toLowerCase();
+            // Note: The file content is only read for text-based files here for OpenAI models
             if (/\.(txt|md|csv|json|js|mjs|ts)$/i.test(filename)) {
                 userMessageContent = `${prompt}\n\n----- FILE CONTENT (${req.file.originalname}) -----\n${req.file.buffer.toString('utf-8')}`;
             } else if (/\.(pdf|mp4|mp3|wav|avi|mov)$/i.test(filename)) {
