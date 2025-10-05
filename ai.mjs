@@ -108,17 +108,15 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                  prompt: prompt,
                  config: {
                      numberOfVideos: 1,
-                     duration: 8, // Set video duration to 8 seconds
+                     duration: 8,
                      outputMimeType: 'video/mp4',
                      aspectRatio: '16:9',
                  },
              });
 
-             // The response will contain a long-running operation.
-             // You need to poll the operation status to get the final video URI.
              let operation = response;
              while (!operation.done) {
-                 await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                 await new Promise(resolve => setTimeout(resolve, 5000));
                  operation = await ai.operations.getOperation({
                      name: operation.name,
                  });
@@ -133,16 +131,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                  throw new Error('Video URI not found in operation response.');
              }
              
-             // The URI is a Google Cloud Storage link, which is not directly streamable 
-             // in a client-side video tag without pre-signed URLs or proxying.
-             // For a simple demonstration, a pre-signed URL would be needed, or 
-             // the video would have to be downloaded and served.
-             // Given the constraints of a single response, we will assume a 
-             // publicly accessible or proxyable URI for the sake of completion.
-             // In a real application, you would need to implement GCS authentication/proxying.
-             // For this example, we'll return the GCS URI.
-             // NOTE: This GCS URI is likely NOT directly viewable by the client without further server logic.
-
              return res.json({ 
                  videoUrl: videoUri, 
                  message: "Video generation completed. The URI returned is a Google Cloud Storage link."
