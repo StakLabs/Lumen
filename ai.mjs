@@ -88,6 +88,7 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
             const userMessageContent = createUserContent(contentsArray);
 
+            // This is the CRITICAL fixed line: calling generateContent on the 'ai' client.
             const response = await ai.generateContent({
                 model: modelToUse,
                 contents: [userMessageContent]
