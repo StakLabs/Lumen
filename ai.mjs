@@ -26,6 +26,8 @@ app.use(express.json());
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+const sessions = {};
+
 const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
 setInterval(() => { fetch(LUMEN_PING_URL).catch(() => {}); }, 10 * 60 * 1000);
 
@@ -39,9 +41,7 @@ function findModel(modelName) {
 }
 
 function getMimeType(fileName, detectedMimeType) {
-    if (detectedMimeType) {
-        return String(detectedMimeType);
-    }
+    if (detectedMimeType) return String(detectedMimeType);
     const ext = fileName.split('.').pop().toLowerCase();
     switch (ext) {
         case 'png': return 'image/png';
@@ -61,18 +61,17 @@ function getMimeType(fileName, detectedMimeType) {
 
 app.post('/ask', upload.single('file'), async (req, res) => {
     try {
-        const { prompt = '', system = '', model, userTier = 'free', type } = req.body;
+        const { prompt = '', system = '', model, userTier = 'free', type, userId = 'default' } = req.body;
         if (!model) return res.status(400).json({ error: 'Model not specified.' });
 
         const modelToUse = findModel(model);
 
         if (modelToUse === 'gemini-2.5-pro' && type !== 'image' && type !== 'video') {
+            if (!sessions[userId]) sessions[userId] = [];
             const contentsArray = [];
             if (prompt) contentsArray.push(prompt);
-
             if (req.file) {
                 const mimeType = getMimeType(req.file.originalname, req.file.mimetype);
-
                 const filePart = {
                     inlineData: {
                         data: req.file.buffer.toString('base64'),
@@ -80,29 +79,24 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                     },
                     displayName: req.file.originalname,
                 };
-
                 contentsArray.push(filePart);
             }
-
             if (contentsArray.length === 0) return res.status(400).json({ error: 'Please provide a prompt or a file for Gemini.' });
-
             const userMessageContent = createUserContent(contentsArray);
-
+            const history = sessions[userId].slice(-10);
             const response = await ai.models.generateContent({
                 model: modelToUse,
-                contents: [userMessageContent]
+                contents: [...history, userMessageContent]
             });
-
             const replyText = response?.text || 'Gemini generated no text.';
+            sessions[userId].push(userMessageContent, { role: 'model', parts: [{ text: replyText }] });
             return res.json({ response: replyText });
         }
-        
+
         else if (modelToUse === 'gemini-2.5-pro' && type === 'video') {
              if (!prompt) return res.status(400).json({ error: 'Please provide a prompt for video generation.' });
              if (userTier !== 'loyal') return res.status(403).json({ error: 'Veo generation is exclusive to the Loyal Tier (Lumen VI).' });
-
              const veoModel = 'veo-3.0-generate-001';
-
              const response = await ai.models.generateVideos({
                  model: veoModel,
                  prompt: prompt,
@@ -113,36 +107,21 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                      aspectRatio: '16:9',
                  },
              });
-
              let operation = response;
              while (!operation.done) {
                  await new Promise(resolve => setTimeout(resolve, 5000));
-                 operation = await ai.operations.getOperation({
-                     name: operation.name,
-                 });
+                 operation = await ai.operations.getOperation({ name: operation.name });
              }
-
-             if (operation.error) {
-                 throw new Error(operation.error.message || 'Video generation failed.');
-             }
-
+             if (operation.error) throw new Error(operation.error.message || 'Video generation failed.');
              const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
-             if (!videoUri) {
-                 throw new Error('Video URI not found in operation response.');
-             }
-             
-             return res.json({ 
-                 videoUrl: videoUri, 
-                 message: "Video generation completed. The URI returned is a Google Cloud Storage link."
-             });
+             if (!videoUri) throw new Error('Video URI not found in operation response.');
+             return res.json({ videoUrl: videoUri, message: "Video generation completed. The URI returned is a Google Cloud Storage link." });
         }
-        
+
         else if (modelToUse === 'gemini-2.5-pro' && type === 'image') {
              if (!prompt) return res.status(400).json({ error: 'Please provide a prompt for image generation.' });
              if (!['loyal'].includes(userTier)) return res.status(403).json({ error: 'Imagen generation is exclusive to the Loyal Tier (Lumen VI).' });
-
              const imagenModel = 'imagen-3.0-generate-002';
-
              const response = await ai.models.generateImages({
                  model: imagenModel,
                  prompt: prompt,
@@ -152,20 +131,14 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                      aspectRatio: '1:1',
                  },
              });
-
              const base64Image = response.generatedImages[0].image.imageBytes;
-
-             return res.json({ 
-                 data: [{ url: `data:image/jpeg;base64,${base64Image}` }] 
-             });
+             return res.json({ data: [{ url: `data:image/jpeg;base64,${base64Image}` }] });
         }
 
         else if (type === 'image') {
             if (!['premium', 'ultra'].includes(userTier)) return res.status(403).json({ error: 'Image generation only for premium users.' });
-            
             const dalleModel = (['Lumen o3', 'Lumen V'].includes(model)) ? 'dall-e-3' : 'dall-e-2';
             const dalleSize = (['Lumen o3', 'Lumen V'].includes(model)) ? '1024x1024' : '512x512';
-            
             const response = await openai.images.generate({ model: dalleModel, prompt, n: 1, size: dalleSize });
             return res.json(response);
         }
@@ -181,7 +154,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
         const messagesArray = [];
         if (system.trim()) messagesArray.push({ role: 'system', content: system });
-
         let userMessageContent = prompt;
         if (req.file) {
             const filename = req.file.originalname.toLowerCase();
@@ -195,11 +167,9 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                 return res.status(400).json({ error: 'Unsupported file type.' });
             }
         }
-
         messagesArray.push({ role: 'user', content: userMessageContent });
         const completion = await openai.chat.completions.create({ model: chatModel, messages: messagesArray });
         res.json({ response: completion.choices[0].message.content });
-
     } catch (err) {
         console.error(err);
         const status = err.response?.status || 500;
@@ -209,5 +179,4 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 });
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
-
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
