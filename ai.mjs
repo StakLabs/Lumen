@@ -52,9 +52,14 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             if (prompt) contentsArray.push(prompt);
 
             if (req.file) {
+                // *** FIX: Robust MIME Type Handling ***
+                const mimeType = req.file.mimetype && req.file.mimetype.length > 0
+                    ? req.file.mimetype
+                    : 'application/octet-stream';
+                
                 const uploadedFile = await ai.files.upload({
                     file: req.file.buffer,
-                    mimeType: req.file.mimetype || 'application/octet-stream',
+                    mimeType: mimeType, 
                     displayName: req.file.originalname, 
                 });
                 
