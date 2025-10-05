@@ -52,12 +52,12 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             if (prompt) contentsArray.push(prompt);
 
             if (req.file) {
-                // *** FIX: Explicitly setting MIME Type to PDF ***
-                const mimeType = 'application/pdf';
+                // *** FINAL FIX: Guarantee application/pdf MIME Type and force it to be a string ***
+                const guaranteedMimeType = String('application/pdf');
                 
                 const uploadedFile = await ai.files.upload({
                     file: req.file.buffer,
-                    mimeType: mimeType, 
+                    mimeType: guaranteedMimeType, 
                     displayName: req.file.originalname, 
                 });
                 
