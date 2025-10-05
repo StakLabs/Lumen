@@ -199,29 +199,10 @@ async function userMessage() {
 
     wait = 1;
 
-    let fileRef = null;
-    if (file) {
-        if (file.size > 100 * 1024 * 1024) {
-            alert("File too large! Max is 100MB.");
-            wait = 0;
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await fetch("https://lumen-ai.onrender.com/upload", {
-            method: "POST",
-            body: formData
-        });
-
-        const data = await res.json();
-        if (!data.success) {
-            alert("Failed to upload file.");
-            wait = 0;
-            return;
-        }
-        fileRef = data.url;
+    if (file && file.size > 100 * 1024 * 1024) {
+        alert("File too large! Max is 100MB.");
+        wait = 0;
+        return;
     }
 
     const formattedPreviousMessages = previousMessages.join('\nUser: ');
@@ -357,19 +338,23 @@ async function userMessage() {
         await delay(10000);
     }
 
-    const payload = {
-        type: 'chat',
-        prompt: userInput,
-        system: systemPrompt,
-        model: modelToUse,
-        userTier: userTier,
-        file: fileRef
-    };
+    // FIX: Send data as FormData to include the file in the same request as text.
+    const formDataPayload = new FormData();
+    formDataPayload.append('type', 'chat');
+    formDataPayload.append('prompt', userInput);
+    formDataPayload.append('system', systemPrompt);
+    formDataPayload.append('model', selectedModelInput.value); // Use the original model name for the server's findModel function
+    formDataPayload.append('userTier', userTier);
+    
+    if (file) {
+        formDataPayload.append('file', file);
+    }
+
 
     const res = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        // NOTE: DO NOT set Content-Type header when using FormData
+        body: formDataPayload
     });
 
     const responseData = await res.json();
@@ -443,7 +428,7 @@ async function userMessage() {
             type: 'video',
             prompt: userInput,
             userTier: userTier,
-            model: selectedModelInput.value // This is 'Lumen VI'
+            model: selectedModelInput.value
         };
 
         const videoRes = await fetch('https://lumen-ai.onrender.com/ask', {
