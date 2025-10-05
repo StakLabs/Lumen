@@ -120,10 +120,12 @@ app.post('/ask', upload.single('file'), async (req, res) => {
              });
         }
 
-        if (type === 'image') {
+        else if (type === 'image') {
             if (!['premium', 'ultra'].includes(userTier)) return res.status(403).json({ error: 'Image generation only for premium users.' });
+            
             const dalleModel = (['Lumen o3', 'Lumen V'].includes(model)) ? 'dall-e-3' : 'dall-e-2';
             const dalleSize = (['Lumen o3', 'Lumen V'].includes(model)) ? '1024x1024' : '512x512';
+            
             const response = await openai.images.generate({ model: dalleModel, prompt, n: 1, size: dalleSize });
             return res.json(response);
         }
