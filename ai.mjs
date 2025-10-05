@@ -66,13 +66,13 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
         const modelToUse = findModel(model);
 
-        if (modelToUse === 'gemini-2.5-pro') {
+        if (modelToUse === 'gemini-2.5-pro' && type !== 'image') {
             const contentsArray = [];
             if (prompt) contentsArray.push(prompt);
 
             if (req.file) {
                 const mimeType = getMimeType(req.file.originalname, req.file.mimetype);
-                
+
                 const filePart = {
                     inlineData: {
                         data: req.file.buffer.toString('base64'),
@@ -80,7 +80,7 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                     },
                     displayName: req.file.originalname,
                 };
-                
+
                 contentsArray.push(filePart);
             }
 
@@ -88,7 +88,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
             const userMessageContent = createUserContent(contentsArray);
 
-            // FIX: Use ai.models.generateContent to bypass the top-level client issue
             const response = await ai.models.generateContent({
                 model: modelToUse,
                 contents: [userMessageContent]
@@ -96,6 +95,29 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
             const replyText = response?.text || 'Gemini generated no text.';
             return res.json({ response: replyText });
+        }
+        
+        else if (modelToUse === 'gemini-2.5-pro' && type === 'image') {
+             if (!prompt) return res.status(400).json({ error: 'Please provide a prompt for image generation.' });
+             if (!['loyal'].includes(userTier)) return res.status(403).json({ error: 'Imagen generation is exclusive to the Loyal Tier (Lumen VI).' });
+
+             const imagenModel = 'imagen-3.0-generate-002';
+
+             const response = await ai.models.generateImages({
+                 model: imagenModel,
+                 prompt: prompt,
+                 config: {
+                     numberOfImages: 1,
+                     outputMimeType: 'image/jpeg',
+                     aspectRatio: '1:1',
+                 },
+             });
+
+             const base64Image = response.generatedImages[0].image.imageBytes;
+
+             return res.json({ 
+                 data: [{ url: `data:image/jpeg;base64,${base64Image}` }] 
+             });
         }
 
         if (type === 'image') {
@@ -138,7 +160,9 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: err.message });
+        const status = err.response?.status || 500;
+        const message = err.message || 'An unknown error occurred on the server.';
+        res.status(status).json({ error: message });
     }
 });
 
