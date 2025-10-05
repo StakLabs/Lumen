@@ -64,7 +64,7 @@ recognition.onend = () => {
 if (!localStorage.getItem('date')) localStorage.setItem('date', new Date().toISOString().slice(0, 10));
 let trials = localStorage.getItem('trials_' + lumenUser.username + '_' + new Date().toISOString().slice(0, 10)) || 0;
 if (localStorage.getItem('date') != new Date().toISOString().slice(0, 10)) {
-    localStorage.setItem('date', new Date().toISOString().slice(0, 10));
+    localStorage.setItem('date', new Date().toISOString().slice(0, 0));
     trials = 0;
 }
 
@@ -130,6 +130,7 @@ let modeSelector = document.getElementById('modeSelector');
 if (userTier == 'loyal') {
     modeSelector.innerHTML += `
         <option>Draw an Image</option>
+        <option>Generate a Video</option>
     `;
 }
 
@@ -156,8 +157,8 @@ getTime();
 
 async function userMessage() {
     if (wait !== 0) return;
-    if (modeSelector.value === 'Draw an Image' && selectedModelInput.value !== 'Lumen VI') {
-        alert('Image generation is only available with Lumen VI');
+    if ((modeSelector.value === 'Draw an Image' || modeSelector.value === 'Generate a Video') && selectedModelInput.value !== 'Lumen VI') {
+        alert(`${modeSelector.value} is only available with Lumen VI`);
         return;
     }
 
@@ -178,6 +179,7 @@ async function userMessage() {
         <div id="a${messages}"></div>
         <div id="a${messages}a"></div>
         <img id="image${messages}" />
+        <video id="video${messages}" controls style="display: none; max-width: 100%; height: auto; margin-top: 10px;"></video>
     `;
 
     const messageBox = document.getElementById(`a${messages}`);
@@ -227,11 +229,11 @@ async function userMessage() {
     previousMessages.push(userInput.toLowerCase());
 
     const modelToUse = selectedModelInput.value === 'Lumen V' ? 'gpt-5'
-                         : selectedModelInput.value === 'Lumen 4.1 Pro' ? 'gpt-4.1'
-                         : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
-                         : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
-                         : selectedModelInput.value === 'Lumen VI' ? 'gemini-2.5-pro'
-                         : 'gpt-3.5-turbo';
+                             : selectedModelInput.value === 'Lumen 4.1 Pro' ? 'gpt-4.1'
+                             : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
+                             : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
+                             : selectedModelInput.value === 'Lumen VI' ? 'gemini-2.5-pro'
+                             : 'gpt-3.5-turbo';
 
     const systemPrompt = `
         You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck. 
@@ -243,6 +245,7 @@ async function userMessage() {
         ${modeSelector.value === 'Coding Expert' ? 'You are a coding expert, providing detailed code solutions and explanations. Always check your code for errors before sending them to user.' : ''}
         ${modeSelector.value === 'Think for Longer' ? 'You take your time to think and provide the best answer possible. Take at least 10 seconds' : ''}
         ${modeSelector.value === 'Brainstorm' ? 'You are a brainstorming expert, generating creative ideas and solutions.' : ''}
+        ${modeSelector.value === 'Generate a Video' ? 'You are in Video Generation mode. Your only task is to analyze the user\'s prompt and extract a detailed description suitable for video generation, or state that a video cannot be generated. You should never output a direct response unless you cannot generate a video. You must use the "VIDEO REQUESTED" tag to initiate video generation.' : ''}
         You are in ${modeSelector.value} mode, which means you will adapt your responses accordingly.
 
         All formatting MUST be done using HTML. 
@@ -262,9 +265,12 @@ async function userMessage() {
         Use emojis when the vibe fits.
 
         ${selectedModelInput.value === 'Lumen VI' ? 'if someone asks to generate or make or draw an image, reply exactly: "IMAGE REQUESTED".' : ''}
+        ${selectedModelInput.value === 'Lumen VI' && modeSelector.value === 'Generate a Video' ? 'If the user requests a video, reply exactly: "VIDEO REQUESTED". Otherwise, provide a concise explanation why a video cannot be generated from the prompt.' : ''}
+
 
         You can write code, generate images, and answer anything.
         Image generation is only available with Lumen VI, and you are ${selectedModelInput.value === 'Lumen VI' ? 'allowed' : 'not allowed'} to generate images.
+        Video generation is only available with Lumen VI, and you are ${selectedModelInput.value === 'Lumen VI' ? 'allowed' : 'not allowed'} to generate videos.
 
         **Bold all important words, phrases, and sentences.**
 
@@ -309,17 +315,17 @@ async function userMessage() {
 
     console.log('Using model:', modelToUse);
     const memoryLoad = {
-            type: 'chat',
-            prompt: `Classify whether this user input contains:
-                    1) Personal information (age, location, name, etc.)
-                    2) Requests to remember something explicitly
-                    3) Preferences or interests
-                    4) Any other relevant information that should be stored in memory
-                    Reply with only YES if any of these apply, otherwise NO. Nothing else.
-                    User input: "${userInput}"`,
-            system: "You are a strict memory classifier. Reply only YES or NO.",
-            model: 'gpt-3.5-turbo',
-        };
+                type: 'chat',
+                prompt: `Classify whether this user input contains:
+                        1) Personal information (age, location, name, etc.)
+                        2) Requests to remember something explicitly
+                        3) Preferences or interests
+                        4) Any other relevant information that should be stored in memory
+                        Reply with only YES if any of these apply, otherwise NO. Nothing else.
+                        User input: "${userInput}"`,
+                system: "You are a strict memory classifier. Reply only YES or NO.",
+                model: 'gpt-3.5-turbo',
+            };
 
 
     const memoryRes = await fetch('https://lumen-ai.onrender.com/ask', {
@@ -377,17 +383,19 @@ async function userMessage() {
 
     previousResponses.push(reply);
     
-    if (modeSelector.value != 'Draw an Image') {
-        replyEl.innerHTML = 'Lumen: ' + reply;
-
-        speak(reply);
-    }
-    
     const isImageRequest = (reply.toLowerCase().includes('image requested')) || modeSelector.value === 'Draw an Image';
+    const isVideoRequest = (reply.toLowerCase().includes('video requested')) || modeSelector.value === 'Generate a Video';
     const isLumenVI = selectedModelInput.value === 'Lumen VI';
     const canUseDalle = (userTier === 'ultra' || userTier === 'premium') && !isLumenVI;
     const canUseImagen = isLumenVI && userTier === 'loyal';
+    const canUseVeo = isLumenVI && userTier === 'loyal' && isVideoRequest;
 
+
+    if (!isImageRequest && !isVideoRequest) {
+        replyEl.innerHTML = 'Lumen: ' + reply;
+        speak(reply);
+    }
+    
     if (isImageRequest && (canUseDalle || canUseImagen)) {
         
         let generatingMessage = 'Generating image...';
@@ -425,6 +433,43 @@ async function userMessage() {
             replyEl.innerHTML = 'IMAGE ERROR: Could not generate or display.';
             previousResponses.push('IMAGE ERROR: Could not generate or display.');
             speak('Sorry, there was an error generating the image.');
+        }
+    } else if (canUseVeo) {
+        let generatingMessage = 'Generating video... This may take a few minutes.';
+
+        replyEl.innerHTML = generatingMessage;
+
+        const videoPayload = {
+            type: 'video',
+            prompt: userInput,
+            userTier: userTier,
+            model: selectedModelInput.value // This is 'Lumen VI'
+        };
+
+        const videoRes = await fetch('https://lumen-ai.onrender.com/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(videoPayload)
+        });
+
+        const videoData = await videoRes.json();
+        const videoTarget = document.getElementById(`video${messages}`);
+        
+        if (videoTarget && videoData.videoUrl) {
+            videoTarget.src = videoData.videoUrl;
+            videoTarget.style.display = 'block';
+            previousResponses.push(videoData.videoUrl + ' [VIDEO GENERATED]');
+            replyEl.innerHTML = 'Video generated successfully.';
+            speak('Video generated successfully.');
+
+        } else if (videoData.error) {
+            replyEl.innerHTML = 'VIDEO ERROR: ' + videoData.error;
+            previousResponses.push('VIDEO ERROR: ' + videoData.error);
+            speak('Sorry, there was an error generating the video.');
+        } else {
+            replyEl.innerHTML = 'VIDEO ERROR: Could not generate or display.';
+            previousResponses.push('VIDEO ERROR: Could not generate or display.');
+            speak('Sorry, there was an error generating the video.');
         }
     }
 
