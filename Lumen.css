@@ -1,10 +1,17 @@
 body {
   background: rgb(35, 35, 35);
+  background-image:
+      radial-gradient(at 15% 20%, hsla(320, 70%, 55%, 0.4) 0px, transparent 50%),
+      radial-gradient(at 80% 25%, hsla(30, 90%, 60%, 0.5) 0px, transparent 50%),
+      radial-gradient(at 5% 85%, hsla(260, 60%, 65%, 0.4) 0px, transparent 50%),
+      radial-gradient(at 85% 90%, hsla(200, 80%, 70%, 0.5) 0px, transparent 50%);
   color: #f5f5f5;
   font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
   margin: 0;
   padding-bottom: 200px;
   overflow-x: hidden;
+  background-attachment: fixed;
+    background-size: cover;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
 }
