@@ -45,9 +45,11 @@ function findModel(modelName) {
  * @returns {string} The determined MIME type.
  */
 function getMimeType(fileName, detectedMimeType) {
+    // 1. Use Multer's detected MIME type if available.
     if (detectedMimeType) {
         return String(detectedMimeType);
     }
+    // 2. Fallback to extension check.
     const ext = fileName.split('.').pop().toLowerCase();
     switch (ext) {
         case 'png': return 'image/png';
@@ -61,6 +63,7 @@ function getMimeType(fileName, detectedMimeType) {
         case 'txt': return 'text/plain';
         case 'csv': return 'text/csv';
         case 'json': return 'application/json';
+        // 3. Last resort fallback.
         default: return 'application/octet-stream';
     }
 }
@@ -79,20 +82,21 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             if (prompt) contentsArray.push(prompt);
 
             if (req.file) {
-                // *** CRITICAL FIX: Use a utility function to determine MIME type reliably ***
+                // Determine the most reliable MIME type using the utility
                 const mimeType = getMimeType(req.file.originalname, req.file.mimetype);
                 
-                if (mimeType === 'application/octet-stream') {
-                     console.warn(`Warning: Could not reliably determine MIME type for ${req.file.originalname}. Falling back.`);
-                }
+                // *** CRITICAL CHANGE: Pass the file buffer directly to the file object ***
+                // This ensures the SDK receives the file and MIME type together explicitly.
+                const filePart = {
+                    inlineData: {
+                        data: req.file.buffer.toString('base64'),
+                        mimeType: mimeType
+                    },
+                    displayName: req.file.originalname,
+                };
                 
-                const uploadedFile = await ai.files.upload({
-                    file: req.file.buffer,
-                    mimeType: mimeType, 
-                    displayName: req.file.originalname, 
-                });
-                
-                contentsArray.push(uploadedFile);
+                // Add the file part directly to the contents array instead of using ai.files.upload
+                contentsArray.push(filePart);
             }
 
             if (contentsArray.length === 0) return res.status(400).json({ error: 'Please provide a prompt or a file for Gemini.' });
@@ -106,7 +110,9 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             const replyText = response?.text || 'Gemini generated no text.';
             return res.json({ response: replyText });
         }
-
+// The rest of the code remains the same...
+// ...
+// ...
         if (type === 'image') {
             if (!['premium', 'ultra'].includes(userTier)) return res.status(403).json({ error: 'Image generation only for premium users.' });
             const dalleModel = (['Lumen o3', 'Lumen V'].includes(model)) ? 'dall-e-3' : 'dall-e-2';
