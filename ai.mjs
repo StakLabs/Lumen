@@ -178,5 +178,11 @@ app.post('/ask', upload.single('file'), async (req, res) => {
     }
 });
 
+app.post('/reset', (req, res) => {
+    const { userId } = req.body;
+    if (sessions[userId]) delete sessions[userId];
+    res.json({ message: 'Session reset.' });
+  });  
+
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
