@@ -471,8 +471,7 @@ function delay(ms) {
 async function newChat() {
     await fetch(`http://lumen-ai.onrender.com/reset`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        headers: { 'Content-Type': 'application/json' }
     });
     window.location.reload();
 }
