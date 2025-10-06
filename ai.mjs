@@ -26,7 +26,7 @@ app.use(express.json());
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const sessions = {};
+let sessionHistory = [];
 
 const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
 setInterval(() => { fetch(LUMEN_PING_URL).catch(() => {}); }, 10 * 60 * 1000);
@@ -61,13 +61,12 @@ function getMimeType(fileName, detectedMimeType) {
 
 app.post('/ask', upload.single('file'), async (req, res) => {
     try {
-        const { prompt = '', system = '', model, userTier = 'free', type, userId = 'default' } = req.body;
+        const { prompt = '', system = '', model, userTier = 'free', type } = req.body;
         if (!model) return res.status(400).json({ error: 'Model not specified.' });
 
         const modelToUse = findModel(model);
 
         if (modelToUse === 'gemini-2.5-pro' && type !== 'image' && type !== 'video') {
-            if (!sessions[userId]) sessions[userId] = [];
             const contentsArray = [];
             if (prompt) contentsArray.push(prompt);
             if (req.file) {
@@ -83,13 +82,13 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             }
             if (contentsArray.length === 0) return res.status(400).json({ error: 'Please provide a prompt or a file for Gemini.' });
             const userMessageContent = createUserContent(contentsArray);
-            const history = sessions[userId].slice(-10);
+            const history = sessionHistory.slice(-10);
             const response = await ai.models.generateContent({
                 model: modelToUse,
                 contents: [...history, userMessageContent]
             });
             const replyText = response?.text || 'Gemini generated no text.';
-            sessions[userId].push(userMessageContent, { role: 'model', parts: [{ text: replyText }] });
+            sessionHistory.push(userMessageContent, { role: 'model', parts: [{ text: replyText }] });
             return res.json({ response: replyText });
         }
 
@@ -179,10 +178,9 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 });
 
 app.post('/reset', (req, res) => {
-    const { userId } = req.body;
-    if (sessions[userId]) delete sessions[userId];
-    res.json({ message: 'Session reset.' });
-  });  
+    sessionHistory = [];
+    res.json({ message: 'Gemini session reset.' });
+});
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
