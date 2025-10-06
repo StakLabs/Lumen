@@ -167,12 +167,18 @@ async function userMessage() {
     messages += 1;
 
     const container = document.getElementById('container');
-    container.innerHTML += `
-        <div id="a${messages}"></div>
-        <div id="a${messages}a"></div>
-        <img id="image${messages}" />
-        <video id="video${messages}" controls style="display: none; max-width: 100%; height: auto; margin-top: 10px;"></video>
-    `;
+    const userDiv = document.createElement('div');
+    userDiv.id = `a${messages}`;
+    container.appendChild(userDiv);
+
+    const responseDiv = document.createElement('div');
+    responseDiv.id = `a${messages}a`;
+    container.appendChild(responseDiv);
+
+    const imageEl = document.createElement('img');
+    imageEl.id = `image${messages}`;
+    container.appendChild(imageEl);
+
 
     const messageBox = document.getElementById(`a${messages}`);
     if (userInput) {
@@ -325,16 +331,18 @@ async function userMessage() {
 
                 Do NOT include explanations, markdown, or additional text outside the JSON.
                 This is the conversation history is the prompt, so that way the user can edit a graph they made.
-                In the conversation history, the last message is the most recent, so if that message is not about a graph, the user is no longer talking about a graph, so do not make a graph.
+                In the conversation history, the last item in the array is the most recent user input.
+                If the last item is not a data-related message, respond with {"makeGraph": false}.
+                For example, if the last item is thanking you, or asking a non-data question, respond with {"makeGraph": false}.
                 `,
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-5',
     };
-            
+    const isLumenVI = selectedModelInput.value === 'Lumen VI';
     const memoryRes = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(memoryLoad)
-    });
+    }); 
     const memoryData = await memoryRes.json();
     let memoryReply = memoryData.response || memoryData.reply || memoryData.choices?.[0]?.message?.content || '';
     const chartRes = await fetch('https://lumen-ai.onrender.com/ask', {
@@ -344,16 +352,28 @@ async function userMessage() {
     });
     const chartData = await chartRes.json();
     let chartReply = chartData.response || chartData.reply || chartData.choices?.[0]?.message?.content || '';
-    createGraph(JSON.parse(chartReply));
-    if (!chartReply.includes('false')) {
-        console.error('Graph created based on user input.');
+    const replyEl = document.createElement('p');
+
+    document.getElementById(`a${messages}a`).appendChild(replyEl);
+    if (isLumenVI) {
+        createGraph(JSON.parse(chartReply));
+        if (!chartReply.includes('false')) {
+            console.error('Graph created based on user input.');
+            await delay(500);
+            return;
+        }
+    }
+    else if (!chartReply.includes('false') && !isLumenVI) {
+        replyEl.innerHTML = 'Running validation...';
+        await delay(2000);
+        replyEl.innerHTML = 'Lumen: Graph generation is only available with Lumen VI.';
+        previousResponses.push('Graph generation is only available with Lumen VI.');
+        wait = 0;
+        await delay(500);
         return;
     }
-
-    const replyEl = document.createElement('p');
     replyEl.classList.add('lumenMessage');
     replyEl.innerHTML = 'Thinking...';
-    document.getElementById(`a${messages}a`).appendChild(replyEl);
     if (memoryReply.includes('YES')) {
         replyEl.innerHTML = 'Updating Memory...';
         await delay(1000);
@@ -404,7 +424,6 @@ async function userMessage() {
     
     const isImageRequest = (reply.toLowerCase().includes('image requested')) || modeSelector.value === 'Draw an Image';
     const isVideoRequest = (reply.toLowerCase().includes('video requested')) || modeSelector.value === 'Generate a Video';
-    const isLumenVI = selectedModelInput.value === 'Lumen VI';
     const canUseDalle = (userTier === 'ultra' || userTier === 'premium') && !isLumenVI;
     const canUseImagen = isLumenVI && userTier === 'loyal';
     const canUseVeo = isLumenVI && userTier === 'loyal' && isVideoRequest;
@@ -531,18 +550,8 @@ function createGraph(gptResponse) {
             datasets: [{
                 label: 'Lumen Analysis',
                 data: gptResponse.data.values,
-                backgroundColor: [
-                    'rgba(75,192,192,0.4)',
-                    'rgba(153,102,255,0.4)',
-                    'rgba(255,159,64,0.4)',
-                    'rgba(255,99,132,0.4)'
-                ],
-                borderColor: [
-                    'rgba(75,192,192,1)',
-                    'rgba(153,102,255,1)',
-                    'rgba(255,159,64,1)',
-                    'rgba(255,99,132,1)'
-                ],
+                backgroundColor: gptResponse.data.labels.map(label => label.toLowerCase() === 'yellow' ? 'yellow' : label.toLowerCase() === 'green' ? 'green' : 'rgba(75,192,192,0.4)'),
+                borderColor: gptResponse.data.labels.map(label => label.toLowerCase() === 'yellow' ? 'gold' : label.toLowerCase() === 'green' ? 'darkgreen' : 'rgba(75,192,192,1)'),
                 borderWidth: 1
             }]
         },
@@ -555,6 +564,6 @@ function createGraph(gptResponse) {
         }
     });
 
-    window.lumenCharts.push(newChart); // store all charts
+    window.lumenCharts.push(newChart); // keep all charts alive
     wait = 0;
 }
