@@ -147,7 +147,12 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             'Lumen o3': 'gpt-4o',
             'Lumen 4.1': 'gpt-4.1-mini',
             'Lumen 4.1 Pro': 'gpt-4.1',
-            'Lumen 3.5': 'gpt-3.5-turbo'
+            'Lumen 3.5': 'gpt-3.5-turbo',
+            'gpt-5': 'gpt-5',
+            'gpt-4o': 'gpt-4o',
+            'gpt-4.1-mini': 'gpt-4.1-mini',
+            'gpt-4.1': 'gpt-4.1',
+            'gpt-3.5-turbo': 'gpt-3.5-turbo'
         };
         const chatModel = chatModelMap[model] || 'gpt-3.5-turbo';
 
