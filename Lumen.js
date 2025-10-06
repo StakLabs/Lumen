@@ -325,6 +325,7 @@ async function userMessage() {
 
                 Do NOT include explanations, markdown, or additional text outside the JSON.
                 This is the conversation history is the prompt, so that way the user can edit a graph they made.
+                In the conversation history, the last message is the most recent, so if that message is not about a graph, the user is no longer talking about a graph, so do not make a graph.
                 `,
         model: 'gpt-3.5-turbo',
     };
