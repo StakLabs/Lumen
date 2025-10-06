@@ -143,24 +143,16 @@ var wait = 0;
 var previousResponse = '';
 var time;
 
-async function getTime() {
-    while (true) {
-        const now = new Date().getHours();
-        if (now <= 11 && now >= 5) time = 'morning';
-        else if (now > 11 && now <= 16) time = 'afternoon';
-        else if (now > 16 && now < 18) time = 'evening';
-        else time = 'night';
-        await delay(10000000);
-    }
-}
-getTime();
-
 async function userMessage() {
-    if (wait !== 0) return;
+    if (wait !== 0) {
+        console.error('Wait for the current response to finish.');
+        return;
+    }
     if ((modeSelector.value === 'Draw an Image' || modeSelector.value === 'Generate a Video') && selectedModelInput.value !== 'Lumen VI') {
         alert(`${modeSelector.value} is only available with Lumen VI`);
         return;
     }
+    // REMOVED: if (window.lumenChart) window.lumenChart.destroy();
 
     const inputBox = document.querySelector('.input-box-container');
     if (!inputBox.classList.contains('bottom')) inputBox.classList.add('bottom');
@@ -171,7 +163,7 @@ async function userMessage() {
     const file = fileInput.files[0];
     if (!userInput && !file) return;
 
-    document.querySelector('.title2').innerHTML = '';
+    document.querySelector('.title2').innerHTML = '';   
     messages += 1;
 
     const container = document.getElementById('container');
@@ -308,7 +300,35 @@ async function userMessage() {
                 model: 'gpt-3.5-turbo',
             };
 
+    const chartLoad = {
+        type: 'chat',
+        prompt: `${previousMessages}`,
+        system: `You are Lumen's Graph Intelligence Assistant.
+                Your goal is to analyze the user's message and decide if it can be represented as a chart or data visualization.
+                If the input seems to describe or imply any numeric data, comparisons, or time-based values, respond ONLY with a JSON object in this format:
 
+                {
+                "makeGraph": true,
+                "chartType": "bar" | "line" | "pie" | "scatter",
+                "data": {
+                    "labels": ["label1", "label2", ...],
+                    "values": [number1, number2, ...]
+                },
+                "summary": "A one-sentence natural language summary of what this chart shows."
+                }
+
+                If the message does NOT clearly contain data that can be visualized, respond ONLY with:
+
+                {
+                "makeGraph": false
+                }   
+
+                Do NOT include explanations, markdown, or additional text outside the JSON.
+                This is the conversation history is the prompt, so that way the user can edit a graph they made.
+                `,
+        model: 'gpt-3.5-turbo',
+    };
+            
     const memoryRes = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -316,6 +336,19 @@ async function userMessage() {
     });
     const memoryData = await memoryRes.json();
     let memoryReply = memoryData.response || memoryData.reply || memoryData.choices?.[0]?.message?.content || '';
+    const chartRes = await fetch('https://lumen-ai.onrender.com/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chartLoad)
+    });
+    const chartData = await chartRes.json();
+    let chartReply = chartData.response || chartData.reply || chartData.choices?.[0]?.message?.content || '';
+    createGraph(JSON.parse(chartReply));
+    if (!chartReply.includes('false')) {
+        console.error('Graph created based on user input.');
+        return;
+    }
+
     const replyEl = document.createElement('p');
     replyEl.classList.add('lumenMessage');
     replyEl.innerHTML = 'Thinking...';
@@ -474,4 +507,53 @@ async function newChat() {
         headers: { 'Content-Type': 'application/json' }
     });
     window.location.reload();
+}
+
+window.lumenCharts = window.lumenCharts || [];
+
+function createGraph(gptResponse) {
+    if (!gptResponse.makeGraph) return;
+
+    const messagesDone = previousMessages.length;
+
+    const chartContainer = document.createElement('div');
+    chartContainer.classList.add('chart-container');
+    chartContainer.innerHTML = `<canvas id="lumenChart${messagesDone}" width="400" height="400"></canvas>`;
+    container.appendChild(chartContainer);
+
+    const ctx = document.getElementById(`lumenChart${messagesDone}`).getContext('2d');
+
+    const newChart = new Chart(ctx, {
+        type: gptResponse.chartType,
+        data: {
+            labels: gptResponse.data.labels,
+            datasets: [{
+                label: 'Lumen Analysis',
+                data: gptResponse.data.values,
+                backgroundColor: [
+                    'rgba(75,192,192,0.4)',
+                    'rgba(153,102,255,0.4)',
+                    'rgba(255,159,64,0.4)',
+                    'rgba(255,99,132,0.4)'
+                ],
+                borderColor: [
+                    'rgba(75,192,192,1)',
+                    'rgba(153,102,255,1)',
+                    'rgba(255,159,64,1)',
+                    'rgba(255,99,132,1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                title: { display: true, text: 'Lumen Graph Intelligence' }
+            }
+        }
+    });
+
+    window.lumenCharts.push(newChart); // store all charts
+    wait = 0;
 }
