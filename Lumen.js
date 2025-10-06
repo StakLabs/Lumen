@@ -467,3 +467,12 @@ async function userMessage() {
 function delay(ms) {
     return new Promise(res => setTimeout(res, ms));
 }
+
+async function newChat() {
+    await fetch(`http://lumen-ai.onrender.com/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+    });
+    window.location.reload();
+}
