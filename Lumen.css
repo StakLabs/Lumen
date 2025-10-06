@@ -415,3 +415,23 @@ code {
   transform: scale(0.97);
   box-shadow: none;
 }
+/* Container to make it look like a black box */
+.chart-container {
+  background-color: #111; /* dark background */
+  padding: 15px;
+  border-radius: 12px;
+  margin: 10px 0;
+  display: inline-block;
+  max-width: 90%; /* keeps it from being massive */
+  overflow-x: auto; /* scroll if it's wide */
+}
+
+/* Canvas styling */
+#lumenChart {
+  display: block;
+  width: 100% !important; /* fills container width */
+  max-width: 600px;       /* optional: caps width */
+  height: 300px !important; /* fixed height for readability */
+  background-color: #111;  /* black background */
+  border-radius: 12px;
+}
