@@ -61,7 +61,7 @@ function getMimeType(fileName, detectedMimeType) {
 
 app.post('/ask', upload.single('file'), async (req, res) => {
     try {
-        const { prompt = '', system = '', model, userTier = 'free', type } = req.body;
+        const { prompt = '', system = '', model, userTier = 'free', type = 'chat' } = req.body;
         if (!model) return res.status(400).json({ error: 'Model not specified.' });
 
         const modelToUse = findModel(model);
@@ -76,7 +76,7 @@ app.post('/ask', upload.single('file'), async (req, res) => {
                         data: req.file.buffer.toString('base64'),
                         mimeType: mimeType
                     },
-                    displayName: req.file.originalname,
+                    displayName: req.file.originalname
                 };
                 contentsArray.push(filePart);
             }
@@ -92,49 +92,49 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             return res.json({ response: replyText });
         }
 
-        else if (modelToUse === 'gemini-2.5-pro' && type === 'video') {
-             if (!prompt) return res.status(400).json({ error: 'Please provide a prompt for video generation.' });
-             if (userTier !== 'loyal') return res.status(403).json({ error: 'Veo generation is exclusive to the Loyal Tier (Lumen VI).' });
-             const veoModel = 'veo-3.0-generate-001';
-             const response = await ai.models.generateVideos({
-                 model: veoModel,
-                 prompt: prompt,
-                 config: {
-                     numberOfVideos: 1,
-                     duration: 8,
-                     outputMimeType: 'video/mp4',
-                     aspectRatio: '16:9',
-                 },
-             });
-             let operation = response;
-             while (!operation.done) {
-                 await new Promise(resolve => setTimeout(resolve, 5000));
-                 operation = await ai.operations.getOperation({ name: operation.name });
-             }
-             if (operation.error) throw new Error(operation.error.message || 'Video generation failed.');
-             const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
-             if (!videoUri) throw new Error('Video URI not found in operation response.');
-             return res.json({ videoUrl: videoUri, message: "Video generation completed. The URI returned is a Google Cloud Storage link." });
+        if (modelToUse === 'gemini-2.5-pro' && type === 'video') {
+            if (!prompt) return res.status(400).json({ error: 'Please provide a prompt for video generation.' });
+            if (userTier !== 'loyal') return res.status(403).json({ error: 'Veo generation is exclusive to the Loyal Tier (Lumen VI).' });
+            const veoModel = 'veo-3.0-generate-001';
+            const response = await ai.models.generateVideos({
+                model: veoModel,
+                prompt: prompt,
+                config: {
+                    numberOfVideos: 1,
+                    duration: 8,
+                    outputMimeType: 'video/mp4',
+                    aspectRatio: '16:9'
+                }
+            });
+            let operation = response;
+            while (!operation.done) {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                operation = await ai.operations.getOperation({ name: operation.name });
+            }
+            if (operation.error) throw new Error(operation.error.message || 'Video generation failed.');
+            const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
+            if (!videoUri) throw new Error('Video URI not found in operation response.');
+            return res.json({ videoUrl: videoUri, message: "Video generation completed. The URI returned is a Google Cloud Storage link." });
         }
 
-        else if (modelToUse === 'gemini-2.5-pro' && type === 'image') {
-             if (!prompt) return res.status(400).json({ error: 'Please provide a prompt for image generation.' });
-             if (!['loyal'].includes(userTier)) return res.status(403).json({ error: 'Imagen generation is exclusive to the Loyal Tier (Lumen VI).' });
-             const imagenModel = 'imagen-3.0-generate-002';
-             const response = await ai.models.generateImages({
-                 model: imagenModel,
-                 prompt: prompt,
-                 config: {
-                     numberOfImages: 1,
-                     outputMimeType: 'image/jpeg',
-                     aspectRatio: '1:1',
-                 },
-             });
-             const base64Image = response.generatedImages[0].image.imageBytes;
-             return res.json({ data: [{ url: `data:image/jpeg;base64,${base64Image}` }] });
+        if (modelToUse === 'gemini-2.5-pro' && type === 'image') {
+            if (!prompt) return res.status(400).json({ error: 'Please provide a prompt for image generation.' });
+            if (userTier !== 'loyal') return res.status(403).json({ error: 'Imagen generation is exclusive to the Loyal Tier (Lumen VI).' });
+            const imagenModel = 'imagen-3.0-generate-002';
+            const response = await ai.models.generateImages({
+                model: imagenModel,
+                prompt: prompt,
+                config: {
+                    numberOfImages: 1,
+                    outputMimeType: 'image/jpeg',
+                    aspectRatio: '1:1'
+                }
+            });
+            const base64Image = response.generatedImages[0].image.imageBytes;
+            return res.json({ data: [{ url: `data:image/jpeg;base64,${base64Image}` }] });
         }
 
-        else if (type === 'image') {
+        if (type === 'image') {
             if (!['premium', 'ultra'].includes(userTier)) return res.status(403).json({ error: 'Image generation only for premium users.' });
             const dalleModel = (['Lumen o3', 'Lumen V'].includes(model)) ? 'dall-e-3' : 'dall-e-2';
             const dalleSize = (['Lumen o3', 'Lumen V'].includes(model)) ? '1024x1024' : '512x512';
