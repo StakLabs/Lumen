@@ -36,7 +36,7 @@ function findModel(modelName) {
     if (modelName === 'Lumen o3') return 'gpt-4o';
     if (modelName === 'Lumen 4.1') return 'gpt-4.1-mini';
     if (modelName === 'Lumen 4.1 Pro') return 'gpt-4.1';
-    if (modelName === 'Lumen VI') return 'gemini-2.5-pro';
+    if (modelName === 'Lumen VI') return 'gemini-2.5-flash';
     return 'gpt-3.5-turbo';
 }
 
@@ -189,3 +189,4 @@ app.post('/reset', (req, res) => {
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
+
