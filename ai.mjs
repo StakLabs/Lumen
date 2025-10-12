@@ -23,13 +23,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Initialize API clients
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-if (!OPENAI_API_KEY || !GEMINI_API_KEY) {
-    console.error("CRITICAL ERROR: One or both API keys are missing. Check environment variables.");
-    // Optionally, prevent the server from starting or set a status route
+if (!OPENAI_API_KEY) {
+    console.error("CRITICAL ERROR: OPENAI_API_KEY is missing. Classification calls will fail.");
+}
+if (!GEMINI_API_KEY) {
+    console.error("CRITICAL ERROR: GEMINI_API_KEY is missing. Lumen VI/Gemini calls will fail.");
 }
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
@@ -72,17 +73,18 @@ app.get('/', (req, res) => {
 });
 
 app.post('/ask', upload.single('file'), async (req, res) => {
-    // Check for critical missing keys early
-    if (!OPENAI_API_KEY || !GEMINI_API_KEY) {
-         console.error("API Key Check Failed in /ask.");
-         return res.status(503).json({ error: 'Server Error: Critical API keys are missing on the server.' });
-    }
-
     try {
         const { prompt = '', system = '', model, userTier = 'free', type } = req.body;
         const modelToUse = model || 'gpt-3.5-turbo';
         const isGeminiModel = modelToUse.startsWith('gemini-');
         
+        if ((!OPENAI_API_KEY && !isGeminiModel) || (!GEMINI_API_KEY && isGeminiModel)) {
+            const missingKey = isGeminiModel ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY';
+            console.error(`Attempted API call without required key: ${missingKey}`);
+            return res.status(503).json({ error: `Server Configuration Error: The required API key (${missingKey}) is missing or invalid.` });
+        }
+
+
         let userMessageContent = prompt;
         const messagesArray = [];
 
@@ -90,35 +92,33 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             messagesArray.push({ role: 'system', content: system });
         }
         
-        // --- Gemini (GoogleGenAI) Logic ---
         if (isGeminiModel && type !== 'image' && type !== 'video') {
             const contentParts = [];
             
-            // Handle file upload for Gemini (if present)
             if (req.file) {
                 const mimeType = getMimeType(req.file.originalname, req.file.mimetype);
                 
                 if (mimeType.startsWith('image/')) {
-                    if (modelToUse !== 'gemini-2.5-pro') {
-                        return res.status(400).json({ error: 'Image analysis requires Lumen VI (gemini-2.5-pro) or a special request type.' });
+                    if (!modelToUse.includes('pro')) {
+                         return res.status(400).json({ error: 'Image analysis requires Lumen VI (gemini-2.5-pro).' });
                     }
                     contentParts.push(createUserContent.fromBuffer({
                         buffer: req.file.buffer,
                         mimeType: mimeType,
                     }));
                 } else if (mimeType.startsWith('text/') || mimeType === 'application/json') {
-                    // For text files, embed content in the prompt
                     userMessageContent = `${prompt}\n\n----- FILE CONTENT (${req.file.originalname}) -----\n${req.file.buffer.toString('utf-8')}`;
                 } else {
                     return res.status(400).json({ error: `Unsupported file type for Gemini chat: ${mimeType}` });
                 }
             }
             
-            contentParts.push(userMessageContent);
-            
+            if (userMessageContent.trim()) {
+                contentParts.push({ text: userMessageContent });
+            }
+
             messagesArray.push({ role: 'user', content: contentParts });
 
-            // Using the new `generateContent` method
             const response = await ai.models.generateContent({
                 model: modelToUse, 
                 contents: messagesArray, 
@@ -127,16 +127,15 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             return res.json({ response: response.text });
         }
         
-        // --- OpenAI (GPT) Logic ---
         if (!isGeminiModel) {
             let chatModel = modelToUse;
 
-            // Handle file upload for GPT (if present)
             if (req.file) {
                 const filename = req.file.originalname.toLowerCase();
-                if (/\.(txt|md|csv|json|js|mjs|ts|pdf|mp4|mp3|wav|avi|mov)$/i.test(filename)) {
-                    // For text/document files, embed content in the prompt
+                if (/\.(txt|md|csv|json|js|mjs|ts)$/i.test(filename)) {
                     userMessageContent = `${prompt}\n\n----- FILE CONTENT (${req.file.originalname}) -----\n${req.file.buffer.toString('utf-8')}`;
+                } else if (/\.(pdf|mp4|mp3|wav|avi|mov)$/i.test(filename)) {
+                    userMessageContent = `${prompt}\n\n[Attached file: ${req.file.originalname}]`;
                 } else if (/\.(png|jpe?g|gif|bmp|webp)$/i.test(filename)) {
                     return res.status(400).json({ error: 'Image analysis requires Lumen VI.' });
                 } else {
@@ -146,7 +145,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
             messagesArray.push({ role: 'user', content: userMessageContent });
             
-            // All classification calls use gpt-3.5-turbo, which is what the client requests
             const completion = await openai.chat.completions.create({ 
                 model: chatModel, 
                 messages: messagesArray 
@@ -155,19 +153,16 @@ app.post('/ask', upload.single('file'), async (req, res) => {
             return res.json({ response: completion.choices[0].message.content });
         }
 
-        // --- Image/Video Generation Logic (Only for Lumen VI) ---
         if (type === 'image' || type === 'video') {
             if (type === 'image') {
-                // Image Generation (DALL-E) - requires an OpenAI key
                 const imageGenerationResult = await openai.images.generate({
-                    model: 'dall-e-3', // Use the latest DALL-E model
+                    model: 'dall-e-3', 
                     prompt: prompt,
                     n: 1,
                     size: '1024x1024'
                 });
                 return res.json({ data: imageGenerationResult.data });
             } else if (type === 'video') {
-                // Video Generation (Simulated/Placeholder or requires a different API not shown)
                 return res.status(501).json({ error: 'Video generation is not yet fully implemented or configured on the server.' });
             }
         }
@@ -177,14 +172,13 @@ app.post('/ask', upload.single('file'), async (req, res) => {
     } catch (err) {
         console.error("Server API Error:", err.message);
         
-        // Capture specific API status codes if available
         const status = err.response?.status || 500;
         let message = err.message || 'An unknown error occurred on the server.';
         
         if (status === 401) {
             message = 'Authentication Error: Invalid or missing API key. Check server environment variables.';
-        } else if (status === 404 && isGeminiModel) {
-            message = `Gemini Model Not Found: The model '${modelToUse}' may not exist or is unavailable in your region.`;
+        } else if (status === 404 && model.startsWith('gemini')) {
+            message = `Gemini Model Not Found: The model '${model}' may not exist or is unavailable in your region.`;
         } else if (status === 404) {
             message = 'OpenAI Model Not Found: Check the requested model name.';
         }
