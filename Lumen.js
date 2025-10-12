@@ -129,6 +129,7 @@ if ((userTier == 'premium' || userTier == 'free') && trials < 10) {
 let modeSelector = document.getElementById('modeSelector');
 if (userTier == 'loyal') {
     modeSelector.innerHTML += `
+        <option>Think for Longer</option>
         <option>Draw an Image</option>
         <option>Generate a Video</option>
     `;
@@ -148,20 +149,27 @@ async function userMessage() {
         console.error('Wait for the current response to finish.');
         return;
     }
-    if ((modeSelector.value === 'Draw an Image' || modeSelector.value === 'Generate a Video') && selectedModelInput.value !== 'Lumen VI') {
+    const isImageMode = modeSelector.value === 'Draw an Image';
+    const isVideoMode = modeSelector.value === 'Generate a Video';
+    const isLumenVI = selectedModelInput.value === 'Lumen VI';
+
+    if ((isImageMode || isVideoMode) && !isLumenVI) {
         alert(`${modeSelector.value} is only available with Lumen VI`);
         return;
     }
-    // REMOVED: if (window.lumenChart) window.lumenChart.destroy();
 
-    const inputBox = document.querySelector('.input-box-container');
-    if (!inputBox.classList.contains('bottom')) inputBox.classList.add('bottom');
-
-    const instructions = (localStorage.getItem(lumenUser.username + '_instructions')) || '';
     const userInput = document.querySelector('#userMessageInput').value.trim();
     const fileInput = document.getElementById("fileInput");
     const file = fileInput.files[0];
     if (!userInput && !file) return;
+
+    if (file && file.size > 100 * 1024 * 1024) {
+        alert("File too large! Max is 100MB.");
+        return;
+    }
+
+    const inputBox = document.querySelector('.input-box-container');
+    if (!inputBox.classList.contains('bottom')) inputBox.classList.add('bottom');
 
     document.querySelector('.title2').innerHTML = '';   
     messages += 1;
@@ -175,9 +183,14 @@ async function userMessage() {
     responseDiv.id = `a${messages}a`;
     container.appendChild(responseDiv);
 
-    const imageEl = document.createElement('img');
-    imageEl.id = `image${messages}`;
-    container.appendChild(imageEl);
+    const mediaEl = document.createElement(isVideoMode ? 'video' : 'img');
+    mediaEl.id = isVideoMode ? `video${messages}` : `image${messages}`;
+    if(isVideoMode) {
+        mediaEl.controls = true;
+        mediaEl.style.display = 'none';
+        mediaEl.classList.add('lumenMessage');
+    }
+    container.appendChild(mediaEl);
 
 
     const messageBox = document.getElementById(`a${messages}`);
@@ -196,22 +209,31 @@ async function userMessage() {
     }
 
     wait = 1;
+    document.querySelector('#userMessageInput').value = '';
+    
+    const replyEl = document.createElement('p');
+    document.getElementById(`a${messages}a`).appendChild(replyEl);
+    replyEl.classList.add('lumenMessage');
+    replyEl.innerHTML = 'Thinking...';
 
-    if (file && file.size > 100 * 1024 * 1024) {
-        alert("File too large! Max is 100MB.");
+    if (isLumenVI && (isImageMode || isVideoMode)) {
+        await handleMediaGeneration(userInput, isImageMode, replyEl, isLumenVI, mediaEl);
         wait = 0;
+        fileInput.value = '';
         return;
     }
-
+    
+    const instructions = (localStorage.getItem(lumenUser.username + '_instructions')) || '';
+    
     const formattedPreviousMessages = previousMessages.join('\nUser: ');
     const formattedPreviousResponses = previousResponses.join('\nLumen: ');
     previousMessages.push(userInput.toLowerCase());
 
-    const modelToUse = selectedModelInput.value === 'Lumen V' ? 'gpt-5'
+    let modelToUse = selectedModelInput.value === 'Lumen V' ? 'gpt-5'
                              : selectedModelInput.value === 'Lumen 4.1 Pro' ? 'gpt-4.1'
                              : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
                              : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
-                             : selectedModelInput.value === 'Lumen VI' ? 'gemini-2.5-pro'
+                             : selectedModelInput.value === 'Lumen VI' ? 'gemini-2.5'
                              : 'gpt-3.5-turbo';
 
     const systemPrompt = `
@@ -290,7 +312,16 @@ async function userMessage() {
         localStorage.setItem('trials_' + lumenUser.username + '_' + formattedDate, trials);
     }
 
-    document.querySelector('#userMessageInput').value = '';
+
+    // FIX 1: Robustly generate the Gemini model name
+    if (modelToUse.startsWith('gemini-2.5')) {
+        let complexitySuffix = await isComplex(userInput);
+        // If isComplex returns false (for non-Lumen VI model) or an empty string (on error), default to 'flash'
+        if (complexitySuffix === false || !complexitySuffix || (complexitySuffix !== 'flash' && complexitySuffix !== 'pro')) {
+            complexitySuffix = 'flash';
+        }
+        modelToUse = `gemini-2.5-${complexitySuffix}`;
+    }
 
     console.log('Using model:', modelToUse);
     const memoryLoad = {
@@ -315,7 +346,7 @@ async function userMessage() {
 
                 {
                 "makeGraph": true,
-                "chartType": "bar" | "line" | "pie" | "scatter",
+                "chartType": "bar" | "line" | "pie" | "scatter" | "doughnut" | "radar" | "polarArea" | "bubble" | "area" | "horizontalBar" | "mixed" | "heatmap" | "treemap" | "sunburst",
                 "data": {
                     "labels": ["label1", "label2", ...],
                     "values": [number1, number2, ...]
@@ -335,9 +366,9 @@ async function userMessage() {
                 If the last item is not a data-related message, respond with {"makeGraph": false}.
                 For example, if the last item is thanking you, or asking a non-data question, respond with {"makeGraph": false}.
                 `,
-        model: 'gpt-5',
+        model: 'gpt-3.5-turbo',
     };
-    const isLumenVI = selectedModelInput.value === 'Lumen VI';
+    
     const memoryRes = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -352,27 +383,41 @@ async function userMessage() {
     });
     const chartData = await chartRes.json();
     let chartReply = chartData.response || chartData.reply || chartData.choices?.[0]?.message?.content || '';
-    const replyEl = document.createElement('p');
+    
 
-    document.getElementById(`a${messages}a`).appendChild(replyEl);
     if (isLumenVI) {
-        createGraph(JSON.parse(chartReply));
-        if (!chartReply.includes('false')) {
+        let chartJson;
+        try {
+             chartJson = JSON.parse(chartReply);
+        } catch (e) {
+             chartJson = { makeGraph: false };
+        }
+        createGraph(chartJson);
+        if (chartJson.makeGraph) {
             console.error('Graph created based on user input.');
+            await delay(500);
+            wait = 0;
+            return;
+        }
+    }
+    else {
+        let chartJson;
+        try {
+             chartJson = JSON.parse(chartReply);
+        } catch (e) {
+             chartJson = { makeGraph: false };
+        }
+        if (chartJson.makeGraph) {
+            replyEl.innerHTML = 'Running validation...';
+            await delay(2000);
+            replyEl.innerHTML = 'Lumen: Graph generation is only available with Lumen VI.';
+            previousResponses.push('Graph generation is only available with Lumen VI.');
+            wait = 0;
             await delay(500);
             return;
         }
     }
-    else if (!chartReply.includes('false') && !isLumenVI) {
-        replyEl.innerHTML = 'Running validation...';
-        await delay(2000);
-        replyEl.innerHTML = 'Lumen: Graph generation is only available with Lumen VI.';
-        previousResponses.push('Graph generation is only available with Lumen VI.');
-        wait = 0;
-        await delay(500);
-        return;
-    }
-    replyEl.classList.add('lumenMessage');
+    
     replyEl.innerHTML = 'Thinking...';
     if (memoryReply.includes('YES')) {
         replyEl.innerHTML = 'Updating Memory...';
@@ -387,17 +432,15 @@ async function userMessage() {
         replyEl.innerHTML = 'Thinking...';
     }
 
-    if (modeSelector.value === 'Think for Longer') {
+    if (modeSelector.value === 'Think for Longer' || modelToUse == 'gemini-2.5-pro') {
         replyEl.innerHTML = 'Thinking longer for a better answer...';
-        await delay(10000);
     }
-
-    // FIX: Send data as FormData to include the file in the same request as text.
+    
     const formDataPayload = new FormData();
     formDataPayload.append('type', 'chat');
     formDataPayload.append('prompt', userInput);
     formDataPayload.append('system', systemPrompt);
-    formDataPayload.append('model', selectedModelInput.value); // Use the original model name for the server's findModel function
+    formDataPayload.append('model', modelToUse); // Send the original model name
     formDataPayload.append('userTier', userTier);
     
     if (file) {
@@ -407,7 +450,6 @@ async function userMessage() {
 
     const res = await fetch('https://lumen-ai.onrender.com/ask', {
         method: 'POST',
-        // NOTE: DO NOT set Content-Type header when using FormData
         body: formDataPayload
     });
 
@@ -421,99 +463,80 @@ async function userMessage() {
         .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
 
     previousResponses.push(reply);
+    const isImageRequest = (reply.toLowerCase().includes('image requested')); // Don't check mode here, it's handled above
+    const isVideoRequest = (reply.toLowerCase().includes('video requested')); // Don't check mode here, it's handled above
     
-    const isImageRequest = (reply.toLowerCase().includes('image requested')) || modeSelector.value === 'Draw an Image';
-    const isVideoRequest = (reply.toLowerCase().includes('video requested')) || modeSelector.value === 'Generate a Video';
     const canUseDalle = (userTier === 'ultra' || userTier === 'premium') && !isLumenVI;
-    const canUseImagen = isLumenVI && userTier === 'loyal';
-    const canUseVeo = isLumenVI && userTier === 'loyal' && isVideoRequest;
-
+    // Lumen VI (Imagen/Veo) is handled by the direct flow above.
 
     if (!isImageRequest && !isVideoRequest) {
         replyEl.innerHTML = 'Lumen: ' + reply;
         speak(reply);
     }
     
-    if (isImageRequest && (canUseDalle || canUseImagen)) {
-        
-        let generatingMessage = 'Generating image...';
-
-        replyEl.innerHTML = generatingMessage;
-
-        const imagePayload = {
-            type: 'image',
-            prompt: userInput,
-            userTier: userTier,
-            model: selectedModelInput.value
-        };
-
-        const imageRes = await fetch('https://lumen-ai.onrender.com/ask', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(imagePayload)
-        });
-
-        const imageData = await imageRes.json();
-        const imageTarget = document.getElementById(`image${messages}`);
-        
-        if (imageTarget && imageData.data?.[0]?.url) {
-            imageTarget.src = imageData.data[0].url;
-            imageTarget.classList.add('lumenMessage', 'img');
-            previousResponses.push(imageData.data[0].url + ' [IMAGE GENERATED]');
-            replyEl.innerHTML = 'Image generated successfully.';
-            speak('Image generated successfully.');
-
-        } else if (imageData.error) {
-            replyEl.innerHTML = 'IMAGE ERROR: ' + imageData.error;
-            previousResponses.push('IMAGE ERROR: ' + imageData.error);
-            speak('Sorry, there was an error generating the image.');
-        } else {
-            replyEl.innerHTML = 'IMAGE ERROR: Could not generate or display.';
-            previousResponses.push('IMAGE ERROR: Could not generate or display.');
-            speak('Sorry, there was an error generating the image.');
-        }
-    } else if (canUseVeo) {
-        let generatingMessage = 'Generating video... This may take a few minutes.';
-
-        replyEl.innerHTML = generatingMessage;
-
-        const videoPayload = {
-            type: 'video',
-            prompt: userInput,
-            userTier: userTier,
-            model: selectedModelInput.value
-        };
-
-        const videoRes = await fetch('https://lumen-ai.onrender.com/ask', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(videoPayload)
-        });
-
-        const videoData = await videoRes.json();
-        const videoTarget = document.getElementById(`video${messages}`);
-        
-        if (videoTarget && videoData.videoUrl) {
-            videoTarget.src = videoData.videoUrl;
-            videoTarget.style.display = 'block';
-            previousResponses.push(videoData.videoUrl + ' [VIDEO GENERATED]');
-            replyEl.innerHTML = 'Video generated successfully.';
-            speak('Video generated successfully.');
-
-        } else if (videoData.error) {
-            replyEl.innerHTML = 'VIDEO ERROR: ' + videoData.error;
-            previousResponses.push('VIDEO ERROR: ' + videoData.error);
-            speak('Sorry, there was an error generating the video.');
-        } else {
-            replyEl.innerHTML = 'VIDEO ERROR: Could not generate or display.';
-            previousResponses.push('VIDEO ERROR: Could not generate or display.');
-            speak('Sorry, there was an error generating the video.');
-        }
+    if (isImageRequest && canUseDalle) {
+        await handleMediaGeneration(userInput, true, replyEl, false, mediaEl);
     }
-
-
+    
+    
     wait = 0;
     fileInput.value = '';
+}
+
+async function handleMediaGeneration(userInput, isImage, replyEl, isLumenVI, mediaEl) {
+    const type = isImage ? 'image' : 'video';
+    const mediaVerb = isImage ? 'Image' : 'Video';
+    const mediaElementId = mediaEl.id;
+
+    replyEl.innerHTML = `Generating ${type}... This may take a few moments.`;
+
+    const payload = {
+        type: type,
+        prompt: userInput,
+        userTier: userTier,
+        model: selectedModelInput.value
+    };
+
+    const res = await fetch('https://lumen-ai.onrender.com/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    
+    if (isImage) {
+        if (data.data?.[0]?.url) {
+            mediaEl.src = data.data[0].url;
+            mediaEl.classList.add('lumenMessage', 'img');
+            previousResponses.push(data.data[0].url + ` [${mediaVerb.toUpperCase()} GENERATED]`);
+            replyEl.innerHTML = `${mediaVerb} generated successfully.`;
+            speak(`${mediaVerb} generated successfully.`);
+
+        } else if (data.error) {
+            replyEl.innerHTML = `${mediaVerb} ERROR: ` + data.error;
+            previousResponses.push(`${mediaVerb} ERROR: ` + data.error);
+            speak(`Sorry, there was an error generating the ${type}.`);
+        } else {
+            replyEl.innerHTML = `${mediaVerb} ERROR: Could not generate or display.`;
+            previousResponses.push(`${mediaVerb} ERROR: Could not generate or display.`);
+            speak(`Sorry, there was an error generating the ${type}.`);
+        }
+    } else if (data.videoUrl) {
+        mediaEl.src = data.videoUrl;
+        mediaEl.style.display = 'block';
+        previousResponses.push(data.videoUrl + ` [${mediaVerb.toUpperCase()} GENERATED]`);
+        replyEl.innerHTML = `${mediaVerb} generated successfully. The video is hosted on Google Cloud Storage.`;
+        speak(`${mediaVerb} generated successfully.`);
+    } else if (data.error) {
+        replyEl.innerHTML = `${mediaVerb} ERROR: ` + data.error;
+        previousResponses.push(`${mediaVerb} ERROR: ` + data.error);
+        speak(`Sorry, there was an error generating the ${type}.`);
+    } else {
+        replyEl.innerHTML = `${mediaVerb} ERROR: Could not generate or display.`;
+        previousResponses.push(`${mediaVerb} ERROR: Could not generate or display.`);
+        speak(`Sorry, there was an error generating the ${type}.`);
+    }
 }
 
 
@@ -538,7 +561,7 @@ function createGraph(gptResponse) {
 
     const chartContainer = document.createElement('div');
     chartContainer.classList.add('chart-container');
-    chartContainer.innerHTML = `<canvas id="lumenChart${messagesDone}" width="400" height="400"></canvas>`;
+    chartContainer.innerHTML = `<canvas id="lumenChart${messagesDone}" width="800      " height="400"></canvas>`;
     container.appendChild(chartContainer);
 
     const ctx = document.getElementById(`lumenChart${messagesDone}`).getContext('2d');
@@ -566,4 +589,34 @@ function createGraph(gptResponse) {
 
     window.lumenCharts.push(newChart); // keep all charts alive
     wait = 0;
+}
+
+async function isComplex(input) {
+    const isLumenVI = selectedModelInput.value === 'Lumen VI';
+    if (!isLumenVI) return false;
+    const complexLoad = {
+                type: 'chat',
+                prompt: `Classify whether this user input is asking for a complex or detailed response that requires deep thinking, multi-step reasoning, or advanced knowledge.
+                        Reply with only FLASH or PRO. FLASH means simple, straightforward, or basic. PRO means complex, detailed, or advanced.
+                        If a prompt is asking for an analysis, comparison, or explanation, it is mostly a FLASH prompt. However, if it is asking for a deep dive, multi-step reasoning, or advanced concepts, it is a PRO prompt.
+                        User input: "${input}"`,
+                system: "You are a strict memory classifier. Reply only FLASH or PRO.",
+                model: 'gpt-3.5-turbo',
+            };
+    const complexRes = await fetch('https://lumen-ai.onrender.com/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(complexLoad)
+    }); 
+    
+    // FIX 2: Handle non-200 status (the 500 error)
+    if (!complexRes.ok) {
+        console.error(`isComplex call to /ask failed with status: ${complexRes.status}. Returning empty string.`);
+        return '';
+    }
+    
+    const complexData = await complexRes.json();
+    let complexReply = complexData.response || complexData.reply || complexData.choices?.[0]?.message?.content || '';
+    complexReply = complexReply.trim().replace(/^"+|"+$/g, '').toLowerCase();
+    return complexReply;
 }
