@@ -42,6 +42,11 @@ let users = [
       email: 'emaan.khalique@gmail.com',
       password: 'nothing',
       tier: 'loyal'
+   }, {
+      username: 'test',
+      email: 'test@gmail.com',
+      password: 'test@321',
+      tier: 'loyal'
    }
 ];
 /*
