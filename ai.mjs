@@ -18,7 +18,7 @@ const __dirname = dirname(__filename);
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors({
-    origin: ['https://www.timelypro.online', 'http://127.0.0.1:5500', 'https://staklabs.github.io', 'http//127.0.0.1:5501'],
+    origin: ['https://www.timelypro.online', 'http://127.0.0.1:5500', 'https://staklabs.github.io', 'http://127.0.0.1:5501'],
     methods: ['GET','POST']
 }));
 app.use(express.json());
@@ -204,4 +204,5 @@ app.post('/reset', (req, res) => {
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
+
 
