@@ -17,17 +17,26 @@ const __dirname = dirname(__filename);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-app.use(
-  cors({
-    origin: [
-      'https://www.timelypro.online',
-      'http://127.0.0.1:5500',
-      'https://staklabs.github.io',
-      'http://127.0.0.1:5500',
-    ],
-    methods: ['GET', 'POST'],
-  })
-);
+const allowlist = [
+  'https://www.timelypro.online',
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i,
+  /^https:\/\/staklabs\.github\.io(\/.*)?$/i,
+];
+
+const corsOptions = {
+  origin(origin, cb) {
+    if (!origin) return cb(null, true);
+    const ok = allowlist.some((o) => (typeof o === 'string' ? o === origin : o.test(origin)));
+    cb(null, ok);
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 204,
+  maxAge: 86400,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -184,7 +193,7 @@ app.post('/ask', upload.single('file'), async (req, res) => {
     let webConfig;
     try {
       if (req.body.web) webConfig = typeof req.body.web === 'string' ? JSON.parse(req.body.web) : req.body.web;
-    } catch (e) {
+    } catch {
       webConfig = undefined;
     }
 
@@ -192,7 +201,7 @@ app.post('/ask', upload.single('file'), async (req, res) => {
       const response = await openai.responses.create({
         model: chatModel,
         input: `${system ? system + '\n\n' : ''}${userMessageContent}`,
-        web: webConfig
+        web: webConfig,
       });
       const text =
         response.output_text ||
