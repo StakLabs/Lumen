@@ -24,6 +24,7 @@ app.use(
       'https://www.timelypro.online',
       'http://127.0.0.1:5500',
       'https://staklabs.github.io',
+      'http://127.0.0.1:5501',
     ],
     methods: ['GET', 'POST'],
   })
@@ -290,3 +291,4 @@ app.post('/reset', (req, res) => {
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`))
+
