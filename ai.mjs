@@ -20,19 +20,25 @@ const upload = multer({ storage: multer.memoryStorage() });
 const allowlist = [
   'https://www.timelypro.online',
   'https://staklabs.github.io',
-  'http://127.0.0.1:5501'
+  'http://127.0.0.1:5501',
+  'http://localhost:5501'
 ];
 
 const corsOptions = {
-  origin(origin, cb) {
-    if (!origin) return cb(null, true);
-    const ok = allowlist.some((o) => (typeof o === 'string' ? o === origin : o.test(origin)));
-    cb(null, ok);
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowlist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
   },
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 204,
-  maxAge: 86400,
+  credentials: true,
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
@@ -230,4 +236,3 @@ app.post('/reset', (req, res) => {
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
-
