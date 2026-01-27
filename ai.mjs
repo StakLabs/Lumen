@@ -19,8 +19,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const allowlist = [
   'https://www.timelypro.online',
-  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i,
-  /^https:\/\/staklabs\.github\.io(\/.*)?$/i,
+  'https://staklabs.github.io',
+  'https://127.0.0.1:5501'
 ];
 
 const corsOptions = {
