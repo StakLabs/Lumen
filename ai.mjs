@@ -20,7 +20,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const allowlist = [
   'https://www.timelypro.online',
   'https://staklabs.github.io',
-  'https://127.0.0.1:5501'
+  'http://127.0.0.1:5501'
 ];
 
 const corsOptions = {
@@ -230,3 +230,4 @@ app.post('/reset', (req, res) => {
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
+
