@@ -227,3 +227,4 @@ app.post('/reset', (req, res) => {
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
+
