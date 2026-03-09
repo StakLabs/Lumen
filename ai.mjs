@@ -25,10 +25,10 @@ const allowlist = [
 ];
 
 const corsOptions = {
-  origin: '*', // Allow ANY website to connect
+  origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true, // Note: specific browsers might complain about credentials: true with origin: '*'
+  credentials: true,
   optionsSuccessStatus: 204
 };
 
@@ -137,7 +137,7 @@ app.post('/ask', upload.single('file'), async (req, res) => {
     if (modelToUse.includes('gemini-2.5') && type === 'image') {
       if (!prompt) return res.status(400).json({ error: 'Please provide a prompt for image generation.' });
       if (userTier !== 'loyal') return res.status(403).json({ error: 'Imagen generation is exclusive to the Loyal Tier (Lumen VI).' });
-      const imagenModel = 'imagegeneration@006';
+      const imagenModel = 'imagen-3.0-generate-002';
       const response = await ai.models.generateImages({
         model: imagenModel,
         prompt,
@@ -227,4 +227,3 @@ app.post('/reset', (req, res) => {
 
 app.get('/ping', (req, res) => res.status(200).send('pong'));
 app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
-
