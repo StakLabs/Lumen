@@ -39,9 +39,17 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 function findModel(model) {
   const modelMap = {
-    'Lumen 4o': 'gpt-4o',
-    'Lumen 4.1': 'gpt-4o-mini',
-    'Lumen VI': 'gemini-1.5-flash'
+        'Lumen VI': 'gemini-2.5-pro',
+        'Lumen V': 'gpt-5',
+        'Lumen o3': 'gpt-4o',
+        'Lumen 4.1': 'gpt-4.1-mini',
+        'Lumen 4.1 Pro': 'gpt-4.1',
+        'Lumen 3.5': 'gpt-3.5-turbo',
+        'gpt-5': 'gpt-5',
+        'gpt-4o': 'gpt-4o',
+        'gpt-4.1-mini': 'gpt-4.1-mini',
+        'gpt-4.1': 'gpt-4.1',
+        'gpt-3.5-turbo': 'gpt-3.5-turbo',
   };
   return modelMap[model] || 'gpt-4o-mini';
 }
