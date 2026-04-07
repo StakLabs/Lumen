@@ -6,7 +6,7 @@ import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fetch from 'node-fetch';
-import { GoogleGenAI, createUserContent } from '@google/generative-ai';
+import { GoogleGenerativeAI, createUserContent } from '@google/generative-ai';
 
 dotenv.config();
 const app = express();
@@ -37,7 +37,7 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
 let sessionHistory = [];
 
