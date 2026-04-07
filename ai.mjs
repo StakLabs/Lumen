@@ -6,7 +6,7 @@ import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fetch from 'node-fetch';
-import { GoogleGenAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 const app = express();
@@ -39,53 +39,38 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 let sessionHistory = [];
 
-const LUMEN_PING_URL = 'https://lumen-ai.onrender.com/ping';
-setInterval(() => {
-  fetch(LUMEN_PING_URL).catch(() => {});
-}, 10 * 60 * 1000);
-
-function getMimeType(fileName, detectedMimeType) {
-  if (detectedMimeType) return String(detectedMimeType);
-  const ext = fileName.split('.').pop().toLowerCase();
-  switch (ext) {
-    case 'png': return 'image/png';
-    case 'jpg':
-    case 'jpeg': return 'image/jpeg';
-    case 'gif': return 'image/gif';
-    case 'webp': return 'image/webp';
-    case 'pdf': return 'application/pdf';
-    case 'txt': return 'text/plain';
-    default: return 'application/octet-stream';
-  }
+function getMimeType(originalname, mimetype) {
+  return mimetype;
 }
 
 function findModel(model) {
   const modelMap = {
-    'Lumen VI': 'gemini-2.5-pro',
-    'Lumen V': 'gpt-5',
-    'Lumen o3': 'gpt-4o',
+    'Lumen 4o': 'gpt-4o',
     'Lumen 4.1': 'gpt-4.1-mini'
   };
-  return modelMap[model] || 'gpt-3.5-turbo';
+  return modelMap[model] || model || 'gpt-3.5-turbo';
 }
 
 app.post('/ask', upload.single('file'), async (req, res) => {
   try {
     const { prompt = '', model, type } = req.body;
     if (!model) return res.status(400).json({ error: 'Model not specified.' });
+    
     const modelToUse = findModel(model);
 
-    if (modelToUse.includes('gemini-2.5')) {
+    if (modelToUse.includes('gemini')) {
       const contentsArray = [];
+      
       if (prompt) contentsArray.push({ text: prompt });
+      
       if (req.file) {
         contentsArray.push({
           inlineData: {
@@ -94,22 +79,31 @@ app.post('/ask', upload.single('file'), async (req, res) => {
           },
         });
       }
-      const response = await ai.models.generateContent({
-        model: modelToUse,
-        contents: [...sessionHistory.slice(-10), createUserContent(contentsArray)],
+
+      const generativeModel = genAI.getGenerativeModel({ model: modelToUse });
+      
+      const result = await generativeModel.generateContent({
+        contents: [...sessionHistory.slice(-10), { role: 'user', parts: contentsArray }],
       });
-      const replyText = response?.text || 'No response.';
+      
+      const replyText = result.response.text() || 'No response.';
       return res.json({ response: replyText });
     }
 
     const messagesArray = [{ role: 'user', content: prompt }];
-    const completion = await openai.chat.completions.create({ model: modelToUse, messages: messagesArray });
+    const completion = await openai.chat.completions.create({ 
+      model: modelToUse, 
+      messages: messagesArray 
+    });
+    
     return res.json({ response: completion.choices[0].message.content });
     
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-app.get('/ping', (req, res) => res.status(200).send('pong'));
-app.listen(PORT, () => console.log(`AI server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
