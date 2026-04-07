@@ -48,27 +48,27 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 let sessionHistory = [];
 
 function getMimeType(originalname, mimetype) {
-  return mimetype;
+  return mimetype || 'application/octet-stream';
 }
 
 function findModel(model) {
   const modelMap = {
     'Lumen 4o': 'gpt-4o',
-    'Lumen 4.1': 'gpt-4.1-mini'
+    'Lumen 4.1': 'gpt-4o-mini',
+    'Lumen VI': 'gemini-1.5-flash'
   };
-  return modelMap[model] || model || 'gpt-3.5-turbo';
+  return modelMap[model] || model || 'gpt-4o-mini';
 }
 
 app.post('/ask', upload.single('file'), async (req, res) => {
   try {
-    const { prompt = '', model, type } = req.body;
+    const { prompt = '', model } = req.body;
     if (!model) return res.status(400).json({ error: 'Model not specified.' });
     
     const modelToUse = findModel(model);
 
     if (modelToUse.includes('gemini')) {
       const contentsArray = [];
-      
       if (prompt) contentsArray.push({ text: prompt });
       
       if (req.file) {
@@ -81,16 +81,16 @@ app.post('/ask', upload.single('file'), async (req, res) => {
       }
 
       const generativeModel = genAI.getGenerativeModel({ model: modelToUse });
-      
       const result = await generativeModel.generateContent({
         contents: [...sessionHistory.slice(-10), { role: 'user', parts: contentsArray }],
       });
       
-      const replyText = result.response.text() || 'No response.';
+      const response = await result.response;
+      const replyText = response.text();
       return res.json({ response: replyText });
     }
 
-    const messagesArray = [{ role: 'user', content: prompt }];
+    const messagesArray = [...sessionHistory.slice(-10), { role: 'user', content: prompt }];
     const completion = await openai.chat.completions.create({ 
       model: modelToUse, 
       messages: messagesArray 
@@ -99,8 +99,8 @@ app.post('/ask', upload.single('file'), async (req, res) => {
     return res.json({ response: completion.choices[0].message.content });
     
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal server error.' });
+    console.error('Error details:', error.message);
+    res.status(500).json({ error: error.message || 'Internal server error.' });
   }
 });
 
