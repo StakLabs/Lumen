@@ -5,15 +5,11 @@ import OpenAI from 'openai';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import fetch from 'node-fetch';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -25,85 +21,89 @@ const allowlist = [
 ];
 
 const corsOptions = {
-  origin: function (origin, callback) {
+  origin: (origin, callback) => {
     if (!origin || allowlist.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true,
-  optionsSuccessStatus: 204
+  credentials: true
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-let sessionHistory = [];
-
-function getMimeType(originalname, mimetype) {
-  return mimetype || 'application/octet-stream';
-}
 
 function findModel(model) {
   const modelMap = {
     'Lumen 4o': 'gpt-4o',
     'Lumen 4.1': 'gpt-4o-mini',
-    'Lumen VI': 'gemini-2.5-flash'
+    'Lumen VI': 'gemini-1.5-flash'
   };
-  return modelMap[model] || model || 'gpt-4o-mini';
+  return modelMap[model] || 'gpt-4o-mini';
 }
+
+setInterval(() => {
+  const timestamp = new Date().toISOString();
+  console.log(`[PONG] Server Heartbeat: ${timestamp} - Status: Active`);
+}, 10 * 60 * 1000);
 
 app.post('/ask', upload.single('file'), async (req, res) => {
   try {
-    const { prompt = '', model } = req.body;
-    if (!model) return res.status(400).json({ error: 'Model not specified.' });
-    
+    const { prompt, model, history = [], workspaceContext = "" } = req.body;
     const modelToUse = findModel(model);
+    
+    const parsedHistory = typeof history === 'string' ? JSON.parse(history) : history;
+    const systemInstruction = `You are Lumen, an AI assistant. Context from the user's workspace: ${workspaceContext}`;
 
     if (modelToUse.includes('gemini')) {
-      const contentsArray = [];
-      if (prompt) contentsArray.push({ text: prompt });
+      const generativeModel = genAI.getGenerativeModel({ model: modelToUse });
       
+      const chat = generativeModel.startChat({
+        history: parsedHistory.map(msg => ({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }],
+        })),
+      });
+
+      let contentPayload;
       if (req.file) {
-        contentsArray.push({
-          inlineData: {
-            data: req.file.buffer.toString('base64'),
-            mimeType: getMimeType(req.file.originalname, req.file.mimetype),
-          },
-        });
+        contentPayload = [
+          prompt || "Analyze this file.",
+          { 
+            inlineData: { 
+              data: req.file.buffer.toString('base64'), 
+              mimeType: req.file.mimetype 
+            } 
+          }
+        ];
+      } else {
+        contentPayload = `${systemInstruction}\n\nUser: ${prompt}`;
       }
 
-      const generativeModel = genAI.getGenerativeModel({ model: modelToUse });
-      const result = await generativeModel.generateContent({
-        contents: [...sessionHistory.slice(-10), { role: 'user', parts: contentsArray }],
-      });
-      
-      const response = await result.response;
-      const replyText = response.text();
-      return res.json({ response: replyText });
+      const result = await chat.sendMessage(contentPayload);
+      return res.json({ response: result.response.text() });
     }
 
-    const messagesArray = [...sessionHistory.slice(-10), { role: 'user', content: prompt }];
-    const completion = await openai.chat.completions.create({ 
-      model: modelToUse, 
-      messages: messagesArray 
-    });
-    
+    const messages = [
+      { role: "system", content: systemInstruction },
+      ...parsedHistory,
+      { role: "user", content: prompt }
+    ];
+
+    const completion = await openai.chat.completions.create({ model: modelToUse, messages });
     return res.json({ response: completion.choices[0].message.content });
-    
+
   } catch (error) {
-    console.error('Error details:', error.message);
-    res.status(500).json({ error: error.message || 'Internal server error.' });
+    console.error('[ERROR]', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Initial PONG sequence started. Intervals: 10 minutes.`);
 });
