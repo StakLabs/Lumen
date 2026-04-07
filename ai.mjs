@@ -55,7 +55,7 @@ function findModel(model) {
   const modelMap = {
     'Lumen 4o': 'gpt-4o',
     'Lumen 4.1': 'gpt-4o-mini',
-    'Lumen VI': 'gemini-1.5-flash'
+    'Lumen VI': 'gemini-2.5-flash'
   };
   return modelMap[model] || model || 'gpt-4o-mini';
 }
