@@ -26,7 +26,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('(.*)', cors(corsOptions));
+// The {*splat} syntax tells Express 5 to match everything, including the root path
+app.options('/{*splat}', cors(corsOptions));
 app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
