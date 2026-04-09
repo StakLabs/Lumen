@@ -78,7 +78,7 @@ function findModel(model) {
     'gpt-4.1': 'gpt-4o',
     'gpt-3.5-turbo': 'gpt-3.5-turbo',
   };
-  if (model && (model.startsWith('gemini-2.5-') || model === 'Lumen VI')) return 'gemini-2.5-pro';
+  if (model && (model.startsWith('gemini-2.5-'))) return 'gemini-2.5-flash';
   return modelMap[model] || 'gpt-3.5-turbo';
 }
 
