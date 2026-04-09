@@ -18,7 +18,11 @@ const __dirname = dirname(__filename);
 const upload = multer({ storage: multer.memoryStorage() });
 
 const corsOptions = {
-  origin: '*',
+  origin: (origin, callback) => {
+    // This allows any origin by reflecting it back to the requester
+    // If there's no origin (like a mobile app or curl), it also allows it
+    callback(null, true);
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
