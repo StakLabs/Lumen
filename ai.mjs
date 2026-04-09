@@ -66,7 +66,7 @@ function getMimeType(fileName, detectedMimeType) {
 
 function findModel(model) {
   const modelMap = {
-    'Lumen VI': 'gemini-1.5-pro',
+    'Lumen VI': 'gemini-2.5-pro',
     'Lumen V': 'gpt-4o',
     'Lumen o3': 'gpt-4o',
     'Lumen 4.1': 'gpt-4o-mini',
