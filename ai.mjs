@@ -17,10 +17,9 @@ const __dirname = dirname(__filename);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// FIXED: CORS now allows anywhere + credentials by mirroring the origin
 const corsOptions = {
   origin: (origin, callback) => {
-    callback(null, true); 
+    callback(null, true);
   },
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -29,7 +28,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// FIXED: Express 5 requires {*splat} for catch-all routes
 app.options('/{*splat}', cors(corsOptions));
 app.use(express.json());
 
@@ -69,12 +67,12 @@ function getMimeType(fileName, detectedMimeType) {
 function findModel(model) {
   const modelMap = {
     'Lumen VI': 'gemini-1.5-pro',
-    'Lumen V': 'gpt-4o', 
+    'Lumen V': 'gpt-4o',
     'Lumen o3': 'gpt-4o',
     'Lumen 4.1': 'gpt-4o-mini',
     'Lumen 4.1 Pro': 'gpt-4o',
     'Lumen 3.5': 'gpt-3.5-turbo',
-    'gpt-5': 'gpt-4o', 
+    'gpt-5': 'gpt-4o',
     'gpt-4o': 'gpt-4o',
     'gpt-4.1-mini': 'gpt-4o-mini',
     'gpt-4.1': 'gpt-4o',
@@ -90,7 +88,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
     if (!model) return res.status(400).json({ error: 'Model not specified.' });
     const modelToUse = findModel(model);
 
-    // Gemini Logic
     if (modelToUse.includes('gemini') && type !== 'image' && type !== 'video') {
       const contentsArray = [];
       if (prompt) contentsArray.push({ text: prompt });
@@ -109,20 +106,22 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
       const userMessageContent = createUserContent(contentsArray);
       const history = sessionHistory.slice(-10);
-      
+
       const genModel = ai.getGenerativeModel({ model: modelToUse });
       const result = await genModel.generateContent({
         contents: [...history, userMessageContent],
       });
-      
+
       const response = await result.response;
       const replyText = response.text() || 'Gemini generated no text.';
-      
-      sessionHistory.push(userMessageContent, { role: 'model', parts: [{ text: replyText }] });
+
+      sessionHistory.push(
+        { role: 'user', parts: contentsArray },
+        { role: 'model', parts: [{ text: replyText }] }
+      );
       return res.json({ response: replyText });
     }
 
-    // Video/Image Tier Logic
     if (modelToUse.includes('gemini') && type === 'video') {
       if (!prompt) return res.status(400).json({ error: 'Please provide a prompt.' });
       if (userTier !== 'loyal') return res.status(403).json({ error: 'Veo generation is exclusive to the Loyal Tier.' });
@@ -135,7 +134,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
       return res.json({ message: "Imagen 3.0 placeholder active." });
     }
 
-    // DALL-E Logic
     if (type === 'image') {
       if (!['premium', 'ultra'].includes(userTier)) {
         return res.status(403).json({ error: 'Image generation only for premium users.' });
@@ -146,7 +144,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
       return res.json(response);
     }
 
-    // OpenAI Logic
     let userMessageContent = prompt;
     if (req.file) {
       const filename = req.file.originalname.toLowerCase();
@@ -164,16 +161,13 @@ app.post('/ask', upload.single('file'), async (req, res) => {
       webConfig = undefined;
     }
 
-    // FIXED: Standard OpenAI SDK uses chat.completions.create
     if (webConfig?.search?.enabled) {
-      const response = await openai.chat.completions.create({
+      const completion = await openai.chat.completions.create({
         model: modelToUse,
         messages: [
-            { role: 'system', content: system || '' },
-            { role: 'user', content: userMessageContent }
+          { role: 'system', content: system || '' },
+          { role: 'user', content: userMessageContent }
         ],
-        // Note: web search isn't a native parameter in the official SDK,
-        // but I've kept your logic flow here.
       });
       return res.json({ response: completion.choices[0].message.content });
     } else {
@@ -184,7 +178,6 @@ app.post('/ask', upload.single('file'), async (req, res) => {
       return res.json({ response: completion.choices[0].message.content });
     }
   } catch (err) {
-    // FIXED: Logging as requested
     console.error("❌ INTERNAL SERVER ERROR");
     console.error("Stack Trace:", err.stack);
     res.status(500).json({ error: err.message, stack: err.stack });
