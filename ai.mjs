@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import OpenAI from 'openai';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -15,12 +14,13 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }
+});
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    callback(null, true);
-  },
+  origin: (origin, callback) => callback(null, true),
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
@@ -31,7 +31,6 @@ app.use(cors(corsOptions));
 app.options('/{*splat}', cors(corsOptions));
 app.use(express.json());
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 let sessionHistory = [];
@@ -41,146 +40,188 @@ setInterval(() => {
   fetch(LUMEN_PING_URL).catch(() => {});
 }, 10 * 60 * 1000);
 
-function createUserContent(parts) {
-  return { role: 'user', parts };
-}
+const TEXT_EXTENSIONS = new Set([
+  'txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'jsonl', 'js', 'mjs', 'cjs',
+  'ts', 'tsx', 'jsx', 'html', 'htm', 'css', 'scss', 'sass', 'less', 'xml',
+  'yaml', 'yml', 'log', 'py', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'rb',
+  'go', 'rs', 'php', 'sh', 'bash', 'bat', 'ps1', 'sql', 'env', 'ini', 'conf',
+  'config', 'toml', 'vue', 'svelte', 'astro', 'graphql', 'gql', 'svg'
+]);
+
+const SUPPORTED_INLINE_MIME = /^(image\/(png|jpeg|jpg|webp|gif|heic|heif)|video\/(mp4|mpeg|mov|avi|webm|wmv|3gpp)|audio\/(wav|mp3|aiff|aac|ogg|flac|mpeg)|application\/pdf)$/i;
 
 function getMimeType(fileName, detectedMimeType) {
-  if (detectedMimeType) return String(detectedMimeType);
-  const ext = fileName.split('.').pop().toLowerCase();
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
   switch (ext) {
     case 'png': return 'image/png';
     case 'jpg':
     case 'jpeg': return 'image/jpeg';
     case 'gif': return 'image/gif';
     case 'webp': return 'image/webp';
+    case 'heic': return 'image/heic';
+    case 'heif': return 'image/heif';
     case 'pdf': return 'application/pdf';
     case 'mp3': return 'audio/mp3';
+    case 'wav': return 'audio/wav';
+    case 'ogg': return 'audio/ogg';
     case 'mp4': return 'video/mp4';
+    case 'mov': return 'video/mov';
+    case 'webm': return 'video/webm';
     case 'txt': return 'text/plain';
     case 'csv': return 'text/csv';
     case 'json': return 'application/json';
-    default: return 'application/octet-stream';
   }
+  if (detectedMimeType && detectedMimeType !== 'application/octet-stream') {
+    return String(detectedMimeType);
+  }
+  return 'application/octet-stream';
 }
 
 function findModel(model) {
   const modelMap = {
     'Lumen VI': 'gemini-2.5-flash',
-    'Lumen V': 'gpt-4o',
-    'Lumen o3': 'gpt-4o',
-    'Lumen 4.1': 'gpt-4o-mini',
-    'Lumen 4.1 Pro': 'gpt-4o',
-    'Lumen 3.5': 'gpt-3.5-turbo',
-    'gpt-5': 'gpt-4o',
-    'gpt-4o': 'gpt-4o',
-    'gpt-4.1-mini': 'gpt-4o-mini',
-    'gpt-4.1': 'gpt-4o',
-    'gpt-3.5-turbo': 'gpt-3.5-turbo',
+    'Lumen V': 'gemini-2.5-flash',
+    'Lumen o3': 'gemini-2.5-pro',
+    'Lumen 4.1': 'gemini-2.5-flash',
+    'Lumen 4.1 Pro': 'gemini-2.5-pro',
+    'Lumen 3.5': 'gemini-2.5-flash',
+    'Lumen 7': 'gemini-2.5-pro',
+    'gpt-5': 'gemini-2.5-pro',
+    'gpt-4o': 'gemini-2.5-flash',
+    'gpt-4.1-mini': 'gemini-2.5-flash',
+    'gpt-4.1': 'gemini-2.5-pro',
+    'gpt-3.5-turbo': 'gemini-2.5-flash',
   };
-  if (model && (model.startsWith('gemini-2.5-'))) return 'gemini-2.5-flash';
-  return modelMap[model] || 'gpt-3.5-turbo';
+  if (model && model.startsWith('gemini-')) return model;
+  return modelMap[model] || 'gemini-2.5-flash';
+}
+
+async function generateWithGemini({ model, prompt, system, file, history }) {
+  const parts = [];
+
+  if (file) {
+    const filename = file.originalname || 'file';
+    const ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
+    const isTextLike =
+      TEXT_EXTENSIONS.has(ext) ||
+      (file.mimetype && file.mimetype.startsWith('text/')) ||
+      file.mimetype === 'application/json';
+
+    if (isTextLike && file.buffer.length <= 2 * 1024 * 1024) {
+      let content;
+      try {
+        content = file.buffer.toString('utf-8');
+      } catch {
+        content = '';
+      }
+      parts.push({
+        text: `----- FILE CONTENT (${filename}) -----\n${content}\n----- END FILE -----`
+      });
+    } else {
+      const mimeType = getMimeType(filename, file.mimetype);
+      if (SUPPORTED_INLINE_MIME.test(mimeType)) {
+        if (file.buffer.length > 20 * 1024 * 1024) {
+          throw new Error(`File "${filename}" is too large for inline processing (max ~20MB for this type).`);
+        }
+        parts.push({
+          inlineData: {
+            data: file.buffer.toString('base64'),
+            mimeType
+          }
+        });
+      } else {
+        parts.push({
+          text: `[Attached file: ${filename} (${mimeType}) — this file type cannot be read directly. Ask the user to convert it to text or an image.]`
+        });
+      }
+    }
+  }
+
+  if (prompt) parts.push({ text: prompt });
+
+  if (parts.length === 0) {
+    throw new Error('Please provide a prompt or a file.');
+  }
+
+  const modelParams = { model };
+  if (system && system.trim()) {
+    modelParams.systemInstruction = system;
+  }
+
+  const genModel = ai.getGenerativeModel(modelParams);
+  const userMessageContent = { role: 'user', parts };
+
+  const result = await genModel.generateContent({
+    contents: [...(history || []), userMessageContent]
+  });
+
+  const response = result.response;
+  let replyText = '';
+  try {
+    replyText = response.text();
+  } catch (e) {
+    console.error('Failed to read Gemini response text:', e.message);
+  }
+  if (!replyText) replyText = 'Gemini generated no text.';
+
+  return { replyText, parts };
 }
 
 app.post('/ask', upload.single('file'), async (req, res) => {
   try {
-    const { prompt = '', system = '', model, userTier = 'free', type } = req.body;
+    const { prompt = '', system = '', model, userTier = 'free', type } = req.body || {};
     if (!model) return res.status(400).json({ error: 'Model not specified.' });
     const modelToUse = findModel(model);
 
-    if (modelToUse.includes('gemini') && type !== 'image' && type !== 'video') {
-      const contentsArray = [];
-      if (prompt) contentsArray.push({ text: prompt });
-      if (req.file) {
-        const mimeType = getMimeType(req.file.originalname, req.file.mimetype);
-        contentsArray.push({
-          inlineData: {
-            data: req.file.buffer.toString('base64'),
-            mimeType,
-          },
-        });
-      }
-      if (contentsArray.length === 0) {
-        return res.status(400).json({ error: 'Please provide a prompt or a file for Gemini.' });
-      }
-
-      const userMessageContent = createUserContent(contentsArray);
-      const history = sessionHistory.slice(-10);
-
-      const genModel = ai.getGenerativeModel({ model: modelToUse });
-      const result = await genModel.generateContent({
-        contents: [...history, userMessageContent],
-      });
-
-      const response = await result.response;
-      const replyText = response.text() || 'Gemini generated no text.';
-
-      sessionHistory.push(
-        { role: 'user', parts: contentsArray },
-        { role: 'model', parts: [{ text: replyText }] }
-      );
-      return res.json({ response: replyText });
-    }
-
-    if (modelToUse.includes('gemini') && type === 'video') {
+    if (type === 'video') {
       if (!prompt) return res.status(400).json({ error: 'Please provide a prompt.' });
-      if (userTier !== 'loyal') return res.status(403).json({ error: 'Veo generation is exclusive to the Loyal Tier.' });
-      return res.json({ message: "Veo 2.0 placeholder active." });
-    }
-
-    if (modelToUse.includes('gemini') && type === 'image') {
-      if (!prompt) return res.status(400).json({ error: 'Please provide a prompt.' });
-      if (userTier !== 'loyal') return res.status(403).json({ error: 'Imagen generation is exclusive to the Loyal Tier.' });
-      return res.json({ message: "Imagen 3.0 placeholder active." });
+      if (userTier !== 'loyal') {
+        return res.status(403).json({ error: 'Veo generation is exclusive to the Loyal Tier.' });
+      }
+      return res.json({ message: 'Veo 2.0 placeholder active.' });
     }
 
     if (type === 'image') {
-      if (!['premium', 'ultra'].includes(userTier)) {
-        return res.status(403).json({ error: 'Image generation only for premium users.' });
+      if (!prompt) return res.status(400).json({ error: 'Please provide a prompt.' });
+      if (!['premium', 'ultra', 'loyal'].includes(userTier)) {
+        return res.status(403).json({ error: 'Image generation requires a premium tier.' });
       }
-      const dalleModel = ['Lumen o3', 'Lumen V'].includes(model) ? 'dall-e-3' : 'dall-e-2';
-      const dalleSize = ['Lumen o3', 'Lumen V'].includes(model) ? '1024x1024' : '512x512';
-      const response = await openai.images.generate({ model: dalleModel, prompt, n: 1, size: dalleSize });
-      return res.json(response);
-    }
-
-    let userMessageContent = prompt;
-    if (req.file) {
-      const filename = req.file.originalname.toLowerCase();
-      if (/\.(txt|md|csv|json|js|mjs|ts)$/i.test(filename)) {
-        userMessageContent = `${prompt}\n\n----- FILE CONTENT (${req.file.originalname}) -----\n${req.file.buffer.toString('utf-8')}`;
-      } else {
-        userMessageContent = `${prompt}\n\n[Attached file: ${req.file.originalname}]`;
-      }
-    }
-
-    let webConfig;
-    try {
-      if (req.body.web) webConfig = typeof req.body.web === 'string' ? JSON.parse(req.body.web) : req.body.web;
-    } catch {
-      webConfig = undefined;
-    }
-
-    if (webConfig?.search?.enabled) {
-      const completion = await openai.chat.completions.create({
-        model: modelToUse,
-        messages: [
-          { role: 'system', content: system || '' },
-          { role: 'user', content: userMessageContent }
-        ],
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${process.env.GEMINI_API_KEY}`;
+      const imgRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instances: [{ prompt }],
+          parameters: { sampleCount: 1 }
+        })
       });
-      return res.json({ response: completion.choices[0].message.content });
-    } else {
-      const messagesArray = [];
-      if (system && system.trim()) messagesArray.push({ role: 'system', content: system });
-      messagesArray.push({ role: 'user', content: userMessageContent });
-      const completion = await openai.chat.completions.create({ model: modelToUse, messages: messagesArray });
-      return res.json({ response: completion.choices[0].message.content });
+      const data = await imgRes.json();
+      if (!imgRes.ok) {
+        return res.status(imgRes.status).json({
+          error: data?.error?.message || 'Image generation failed.'
+        });
+      }
+      return res.json(data);
     }
+
+    const { replyText, parts } = await generateWithGemini({
+      model: modelToUse,
+      prompt,
+      system,
+      file: req.file,
+      history: sessionHistory.slice(-10)
+    });
+
+    sessionHistory.push(
+      { role: 'user', parts },
+      { role: 'model', parts: [{ text: replyText }] }
+    );
+
+    return res.json({ response: replyText });
   } catch (err) {
-    console.error("❌ INTERNAL SERVER ERROR");
-    console.error("Stack Trace:", err.stack);
-    res.status(500).json({ error: err.message, stack: err.stack });
+    console.error('INTERNAL SERVER ERROR:', err.message);
+    const status = err.status || (err.message && err.message.includes('too large') ? 413 : 500);
+    res.status(status).json({ error: err.message });
   }
 });
 
