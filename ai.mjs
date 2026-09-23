@@ -23,6 +23,8 @@ const allowedOrigins = [
   'http://127.0.0.1:5500',
   'http://localhost:5500',
   'https://staklabs.github.io'
+  'https://sites.google.com',
+  'https://ayaan-creator-web-2.github.io'
 ];
 
 const corsOptions = {
