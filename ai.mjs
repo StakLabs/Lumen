@@ -198,7 +198,7 @@ app.post('/ask', upload.single('file'), async (req, res) => {
 
   try {
     const imageModel = ai.getGenerativeModel({
-      model: 'gemini-2.5-flash-image-preview'
+      model: 'gemini-2.5-flash-image'
     });
 
     const imgResult = await imageModel.generateContent({
