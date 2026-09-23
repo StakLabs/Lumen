@@ -194,27 +194,37 @@ app.post('/ask', upload.single('file'), async (req, res) => {
     }
 
     if (type === 'image') {
-      if (!prompt) return res.status(400).json({ error: 'Please provide a prompt.' });
-      if (!['premium', 'ultra', 'loyal'].includes(userTier)) {
-        return res.status(403).json({ error: 'Image generation requires a premium tier.' });
-      }
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${process.env.GEMINI_API_KEY}`;
-      const imgRes = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          instances: [{ prompt }],
-          parameters: { sampleCount: 1 }
-        })
-      });
-      const data = await imgRes.json();
-      if (!imgRes.ok) {
-        return res.status(imgRes.status).json({
-          error: data?.error?.message || 'Image generation failed.'
-        });
-      }
-      return res.json(data);
+  if (!prompt) return res.status(400).json({ error: 'Please provide a prompt.' });
+
+  try {
+    const imageModel = ai.getGenerativeModel({
+      model: 'gemini-2.5-flash-image-preview'
+    });
+
+    const imgResult = await imageModel.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }]
+    });
+
+    const parts = imgResult.response?.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find(p => p.inlineData);
+
+    if (!imagePart) {
+      return res.status(500).json({ error: 'No image was returned by the model.' });
     }
+
+    // Shape the response so the frontend's existing reader still works:
+    //   data.predictions[0].bytesBase64Encoded  +  .mimeType
+    return res.json({
+      predictions: [{
+        bytesBase64Encoded: imagePart.inlineData.data,
+        mimeType: imagePart.inlineData.mimeType || 'image/png'
+      }]
+    });
+  } catch (err) {
+    console.error('IMAGE GEN ERROR:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
 
     const { replyText, parts } = await generateWithGemini({
       model: modelToUse,
