@@ -1579,64 +1579,7 @@ A Chromium window should open automatically.
 
 ---
 
-# 6. Check the Browser Intelligence Server
-
-Open a browser and visit:
-
-```text
-http://localhost:3000/status
-```
-
-You should see something similar to:
-
-```json
-{
-    "running": true,
-    "browser": true,
-    "page": true,
-    "busy": false
-}
-```
-
-This means Browser Intelligence is running correctly.
-
----
-
-# 7. Test Browser Intelligence
-
-Before using Axiom, you can manually test the browser.
-
-## Windows
-
-Open PowerShell and run:
-
-```powershell
-Invoke-RestMethod `
-    -Uri "http://localhost:3000/action" `
-    -Method POST `
-    -ContentType "application/json" `
-    -Body '{"action":"navigate","url":"https://search.brave.com"}'
-```
-
-The Chromium window should navigate to:
-
-```text
-https://search.brave.com
-```
-
-## macOS / ChromeOS
-
-Run:
-
-```bash
-curl -X POST http://localhost:3000/action \
-    -H "Content-Type: application/json" \
-    -d '{"action":"navigate","url":"https://search.brave.com"}'
-```
-
----
-
-# 8. Use Lumen 7 Axiom
+# 6. Use Lumen 7 Axiom
 
 Once Browser Intelligence is running:
 
