@@ -1,134 +1,159 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Lumen - Simply Bright</title>
-    <link rel="icon" type="image/x-icon" href="logo-lumen.png">
-    <link rel="stylesheet" href="Lumen.css">
-</head>
-<body>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <p style="text-align: center;">Version 3.1.1</p>
-    <h1 class="title">Lumen</h1>
-    <div class="subtitle">Simply Bright</div>
-    <div class="title2">
-        <br class="br" />
-        <h1 id="thing"></h1>
-    </div>
-    <div class="custom">
-        <button id="set">Custom Instructions</button>
-        <img src="new.png" id="newChat" onclick="newChat();"></img>
-        <select id="modeSelector">
-            <option>Normal</option>
-            <option>Study and Learn</option>
-            <option>Coding Expert</option>
-            <option>Brainstorm</option>
-        </select>
-    </div>
-    <div class="input-box-container">
-    <input type="text" placeholder="Ask Anything..." id="userMessageInput" onkeydown="if(event.key==='Enter') userMessage()" autocomplete="off" />
-    <div class="buttons-row">
-        <button id="sendMessageButton" onclick="userMessage()">Send</button>
-        <button id="fileButton">Upload</button>
-        <button id="voiceToggleButton">🎙️ Voice</button>
-        <select id="selectedModel">
-            <option name="free">Lumen 3.5</option>
-            <option name="trial">Lumen VI</option>
-        </select>
-    </div>
-    <input type="file" id="fileInput" hidden />
-    </div>
-    <br /><br />
-    <div id="container"></div>
-    <br /><br /><br /><br /><br /><br /><br />
-    <script src="Lumen.js"></script>
-    <script>
-        function thing() {
-            let thing = '';
-            let r = Math.floor(Math.random() * 100);
-            if (r < 10) {
-                thing = `How can I assist you today, ${lumenUser.username}?`;
-            } else if (r < 20) {
-                thing = 'What would you like to know?';
-            } else if (r < 30) {
-                thing = 'Ready when you are.';
-            } else if (r < 40) {
-                thing = 'What can I do for you?';
-            } else if (r < 50) {
-                thing = `How can I help?`;
-            } else if (r < 60) {
-                thing = `Ready to dive in?`
-            } else if (r < 70) {
-                thing = 'Where should we begin?';
-            } else if (r < 80) {
-                thing = `What's on your mind today?`;
-            } else if (r < 90) {
-                thing = `Good to see you, ${lumenUser.username}`;
-            } else {
-                thing = `What's on the agenda today?`;
-            }
-            document.getElementById('thing').innerText = thing;
-        }
-        thing();
-        document.getElementById('thing').innerText = "It's official! Lumen VI has been released!";
-    </script>
-    <script>
-        if (!SpeechRecognition) {
-            voiceBtn.disabled = true;
-            voiceBtn.innerText = "🎙️ Voice Not Supported";
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Lumen - Simply Bright</title>
+        <link rel="icon" type="image/x-icon" href="logo-lumen.png">
+        <link rel="stylesheet" href="Lumen.css">
+    </head>
+    <body>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <p style="text-align: center;">Version 3.1.1</p>
+        <h1 class="title">Lumen</h1>
+        <div class="subtitle">Simply Bright</div>
+        <div class="title2">
+            <br class="br" />
+            <h1 id="thing"></h1>
+        </div>
+        <div class="custom">
+            <button id="set">Custom Instructions</button>
+            <img src="new.png" id="newChat" onclick="newChat();"></img>
+            <select id="modeSelector">
+                <option>Normal</option>
+                <option>Study and Learn</option>
+                <option>Coding Expert</option>
+                <option>Brainstorm</option>
+                <option>Think for Longer</option>
+                <option>Draw an Image</option>
+                <option>Generate a Video</option>
+                <option>Shopping Research</option>
+            </select>
+        </div>
+        <div class="input-box-container">
+        <input type="text" placeholder="Ask Anything..." id="userMessageInput" onkeydown="if(event.key==='Enter') userMessage()" autocomplete="off" />
+        <div class="buttons-row">
+            <button id="sendMessageButton" onclick="userMessage()">Send</button>
+            <button id="fileButton">Upload</button>
+            <button id="voiceToggleButton">🎙️ Voice</button>
+            <select id="selectedModel">
+                <option name="free">Lumen VI</option>
+                <option name="premium">Lumen 7 Atlas</option>
+                <option name="ultra">Lumen 7 Nova</option>
+                <option name="loyal">Lumen 7 Axiom</option>
+            </select>
+        </div>
+        <input type="file" id="fileInput" hidden />
+        </div>
+        <br /><br />
+        <div id="container"></div>
+        <br /><br /><br /><br /><br /><br /><br />
+        <script src="Lumen.js"></script>
+        <script>
+            function thing() {
+        let thing = '';
+        let r = Math.floor(Math.random() * 100);
+        if (r < 5) {
+            thing = `How can I assist you today, ${lumenUser.username}?`;
+        } else if (r < 10) {
+            thing = "I'm all ears...";
+        } else if (r < 15) {
+            thing = 'Ready when you are.';
+        } else if (r < 20) {
+            thing = 'The mic is yours!';
+        } else if (r < 25) {
+            thing = 'Ask away!';
+        } else if (r < 30) {
+            thing = 'Ready to dive in?';
+        } else if (r < 35) {
+            thing = 'Where should we begin?';
+        } else if (r < 40) {
+            thing = `What's on your mind today?`;
+        } else if (r < 45) {
+            thing = `Good to see you, ${lumenUser.username}`;
+        } else if (r < 50) {
+            thing = 'Spill the tea!';
+        } else if (r < 55) {
+            thing = 'Fire away.';
+        } else if (r < 60) {
+            thing = 'Hit me with it.';
+        } else if (r < 65) {
+            thing = `What's the mission, ${lumenUser.username}?`;
+        } else if (r < 70) {
+            thing = 'Lay it on me.';
+        } else if (r < 75) {
+            thing = 'The floor is yours.';
+        } else if (r < 80) {
+            thing = 'Standing by.';
+        } else if (r < 85) {
+            thing = `Where to, ${lumenUser.username}?`;
+        } else if (r < 90) {
+            thing = 'Let\'s get into it.';
+        } else if (r < 95) {
+            thing = 'I\'m listening.';
         } else {
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-            let listening = false;
-            let speechMode = false;
-
-            function startListening() {
-                try {
-                    recognition.start();
-                    listening = true;
-                    showStatus('listening');
-                } catch (e) {
-                    console.error("Recognition start error:", e);
-                }
-            }
-
-            recognition.onresult = (e) => {
-                const transcript = e.results[0][0].transcript;
-                inputField.value = transcript;
-                userMessage();
-            };
-
-            recognition.onerror = (e) => {
-                console.error("Recognition error:", e.error);
-                speak("Sorry, I couldn't hear you. Try again.");
-                showStatus(null);
-                listening = false;
-            };
-
-            recognition.onend = () => {
-                listening = false;
-                if (speechMode) startListening();
-            };
-
-            voiceBtn.addEventListener('click', () => {
-                if (!speechMode) {
-                    speechMode = true;
-                    voiceBtn.innerText = '🔇 Stop Voice Mode';
-                    inputField.disabled = true;
-                    inputField.placeholder = '🎤 Listening...';
-                    startListening();
-                } else {
-                    speechMode = false;
-                    voiceBtn.innerText = '🎙️ Start Voice Mode';
-                    inputField.disabled = false;
-                    inputField.placeholder = 'Type a message...';
-                    recognition.stop();
-                    listening = false;
-                    showStatus(null);
-                }
-            });
+            thing = 'Take it away!';
         }
-    </script>
-</body>
-</html>
+        document.getElementById('thing').innerText = thing;
+    }
+    thing();
+        </script>
+        <script>
+            if (!SpeechRecognition) {
+                voiceBtn.disabled = true;
+                voiceBtn.innerText = "🎙️ Voice Not Supported";
+            } else {
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+                let listening = false;
+                let speechMode = false;
+
+                function startListening() {
+                    try {
+                        recognition.start();
+                        listening = true;
+                        showStatus('listening');
+                    } catch (e) {
+                        console.error("Recognition start error:", e);
+                    }
+                }
+
+                recognition.onresult = (e) => {
+                    const transcript = e.results[0][0].transcript;
+                    inputField.value = transcript;
+                    userMessage();
+                };
+
+                recognition.onerror = (e) => {
+                    console.error("Recognition error:", e.error);
+                    speak("Sorry, I couldn't hear you. Try again.");
+                    showStatus(null);
+                    listening = false;
+                };
+
+                recognition.onend = () => {
+                    listening = false;
+                    if (speechMode) startListening();
+                };
+
+                voiceBtn.addEventListener('click', () => {
+                    if (!speechMode) {
+                        speechMode = true;
+                        voiceBtn.innerText = '🔇 Stop Voice Mode';
+                        inputField.disabled = true;
+                        inputField.placeholder = '🎤 Listening...';
+                        startListening();
+                    } else {
+                        speechMode = false;
+                        voiceBtn.innerText = '🎙️ Start Voice Mode';
+                        inputField.disabled = false;
+                        inputField.placeholder = 'Type a message...';
+                        recognition.stop();
+                        listening = false;
+                        showStatus(null);
+                    }
+                });
+            }
+        </script>
+    </body>
+    </html>
