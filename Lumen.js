@@ -1,6 +1,10 @@
 const lumenUser = JSON.parse(localStorage.getItem('lumenUser')) || null;
 const userTier = lumenUser?.tier || 'free';
 
+const voiceBtn = document.getElementById('voiceToggleButton');
+const inputField = document.getElementById('userMessageInput');
+const containerEl = document.getElementById('container');
+
 const speak = async (text) => {
     if (!speechMode) return;
     let spokenText = text.replace(/<br><br>/g, '.\n\n').replace(/<br>/g, '.\n');
@@ -11,59 +15,11 @@ const speak = async (text) => {
     utterance.onend = () => showStatus(null);
 };
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
-recognition.lang = 'en-US';
-recognition.interimResults = false;
-recognition.maxAlternatives = 1;
-
-let speechMode = false;
-let listening = false;
-
-const voiceBtn = document.getElementById('voiceToggleButton');
-const inputField = document.getElementById('userMessageInput');
-const containerEl = document.getElementById('container');
-
-voiceBtn.addEventListener('click', () => {
-    speechMode = !speechMode;
-    voiceBtn.innerText = speechMode ? '🔇 Stop' : '🎙️ Voice';
-    inputField.disabled = speechMode;
-    inputField.placeholder = speechMode ? '🎤 Listening...' : 'Type a message...';
-    if (speechMode) startListening();
-    else recognition.stop();
-});
-
-function startListening() {
-    if (!listening && speechMode) {
-        recognition.start();
-        showStatus('listening');
-        listening = true;
-    }
+function showStatus(status) {
+    return;
 }
-
-recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    document.querySelector('#userMessageInput').value = transcript;
-    userMessage();
-};
-
-recognition.onerror = () => {
-    speak("Sorry, I couldn't hear you. Try again.");
-    showStatus(null);
-    listening = false;
-};
-
-recognition.onend = () => {
-    listening = false;
-    if (speechMode) startListening();
-};
 
 if (!localStorage.getItem('date')) localStorage.setItem('date', new Date().toISOString().slice(0, 10));
-let trials = localStorage.getItem('trials_' + lumenUser.username + '_' + new Date().toISOString().slice(0, 10)) || 0;
-if (localStorage.getItem('date') != new Date().toISOString().slice(0, 10)) {
-    localStorage.setItem('date', new Date().toISOString().slice(0, 10));
-    trials = 0;
-}
 
 document.getElementById('set').addEventListener('click', () => {
     document.querySelector('.custom').innerHTML = `
@@ -92,45 +48,7 @@ document.getElementById('fileButton').addEventListener('click', () => {
 });
 
 let selectedModelInput = document.getElementById('selectedModel');
-if (userTier != 'free') {
-    selectedModelInput.innerHTML += `<option name="premium">Lumen 4.1</option><option name="premium">Lumen o3</option>`;
-    if (userTier == 'ultra' || userTier == 'loyal') selectedModelInput.innerHTML = `
-        <option name="free">Lumen 3.5</option>
-        <option name="premium">Lumen 4.1</option>
-        <option name="premium">Lumen o3</option>
-        <option name="ultra">Lumen 4.1 Pro</option>
-        <option name="ultra">Lumen V</option>
-    `;
-    if (userTier == 'loyal') {
-        selectedModelInput.innerHTML = selectedModelInput.innerHTML += `<option name="loyal">Lumen VI</option>
-        <option name="loyal">Lumen 7</option>`;
-    }
-}
-switch (userTier) {
-    case 'loyal':
-        selectedModelInput.value = 'Lumen 7';
-        break;
-    case 'ultra':
-        selectedModelInput.value = 'Lumen V';
-        break;
-    case 'premium':
-        selectedModelInput.value = 'Lumen o3';
-        break;
-}
-
-if ((userTier == 'premium' || userTier == 'free') && trials < 10) {
-    selectedModelInput.value = 'Lumen 7';
-}
-
 let modeSelector = document.getElementById('modeSelector');
-if (userTier == 'loyal') {
-    modeSelector.innerHTML += `
-        <option>Think for Longer</option>
-        <option>Draw an Image</option>
-        <option>Generate a Video</option>
-        <option>Shopping Research</option>
-    `;
-}
 
 if (!lumenUser) window.location.href = 'l.html';
 
@@ -143,317 +61,964 @@ var time;
 
 async function userMessage() {
     if (wait !== 0) return;
+
+    const inputField = document.getElementById('userMessageInput');
+    const fileInput = document.getElementById('fileInput');
+    const inputBox = document.querySelector('.input-box-container');
+
+    const userInput = inputField.value.trim();
+    const file = fileInput.files[0];
+
     const isImageMode = modeSelector.value === 'Draw an Image';
     const isVideoMode = modeSelector.value === 'Generate a Video';
-    const isLumenVI = selectedModelInput.value === 'Lumen VI';
+    const selectedModelValue = selectedModelInput.value;
 
-    if ((isImageMode || isVideoMode) && !isLumenVI) {
-        alert(`${modeSelector.value} is only available with Lumen VI`);
-        return;
-    }
-    if (isLumenVI) {
-        alert('Lumen VI is currently unavailable and has been shut down');
-        return;
-    }
-    
-
-    const userInput = document.querySelector('#userMessageInput').value.trim();
-    const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
     if (!userInput && !file) return;
 
     if (file && file.size > 100 * 1024 * 1024) {
-        alert("File too large! Max is 100MB.");
+        alert('File too large! Maximum file size is 100MB.');
         return;
     }
 
-    const inputBox = document.querySelector('.input-box-container');
-    if (!inputBox.classList.contains('bottom')) inputBox.classList.add('bottom');
+    if (!inputBox.classList.contains('bottom')) {
+        inputBox.classList.add('bottom');
+    }
 
-    document.querySelector('.title2').innerHTML = '';
-    messages += 1;
+    const title = document.querySelector('.title2');
+
+    if (title) {
+        title.innerHTML = '';
+    }
+
+    messages++;
 
     const userDiv = document.createElement('div');
     userDiv.id = `a${messages}`;
-    containerEl.appendChild(userDiv);
 
     const responseDiv = document.createElement('div');
     responseDiv.id = `a${messages}a`;
-    containerEl.appendChild(responseDiv);
 
-    const mediaEl = document.createElement(isVideoMode ? 'video' : 'img');
-    mediaEl.id = isVideoMode ? `video${messages}` : `image${messages}`;
+    const mediaEl = document.createElement(
+        isVideoMode ? 'video' : 'img'
+    );
+
+    mediaEl.id = isVideoMode
+        ? `video${messages}`
+        : `image${messages}`;
+
+    mediaEl.classList.add('lumenMessage');
+
     if (isVideoMode) {
         mediaEl.controls = true;
         mediaEl.style.display = 'none';
-        mediaEl.classList.add('lumenMessage');
+    } else {
+        mediaEl.style.display = 'none';
     }
+
+    containerEl.appendChild(userDiv);
+    containerEl.appendChild(responseDiv);
     containerEl.appendChild(mediaEl);
 
-    const messageBox = document.getElementById(`a${messages}`);
     if (userInput) {
         const msg = document.createElement('p');
         msg.classList.add('userMessage');
         msg.innerText = userInput;
-        messageBox.appendChild(msg);
+        userDiv.appendChild(msg);
     }
 
     if (file) {
-        const fileMsg = document.createElement('p');
-        fileMsg.classList.add('userMessage');
-        fileMsg.innerText = '📎 Uploaded file';
-        messageBox.appendChild(fileMsg);
+        const fileMsg = document.createElement('div');
+        fileMsg.classList.add('userMessage', 'file-message');
+
+        const icon = document.createElement('span');
+        icon.innerText = '📎';
+
+        const info = document.createElement('div');
+
+        const name = document.createElement('strong');
+        name.innerText = file.name;
+
+        const size = document.createElement('small');
+        size.innerText = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+
+        info.appendChild(name);
+        info.appendChild(size);
+
+        fileMsg.appendChild(icon);
+        fileMsg.appendChild(info);
+
+        userDiv.appendChild(fileMsg);
     }
 
-    wait = 1;
-    document.querySelector('#userMessageInput').value = '';
-
-    const replyEl = document.createElement('p');
-    document.getElementById(`a${messages}a`).appendChild(replyEl);
+    const replyEl = document.createElement('div');
     replyEl.classList.add('lumenMessage');
-    replyEl.innerHTML = 'Thinking...';
 
-    if (isLumenVI && (isImageMode || isVideoMode)) {
-        await handleMediaGeneration(userInput, isImageMode, replyEl, isLumenVI, mediaEl);
+    responseDiv.appendChild(replyEl);
+
+    const showStatus = (text, icon = '✦') => {
+        replyEl.innerHTML = `
+            <div class="lumen-status">
+                <span class="lumen-status-icon">${icon}</span>
+                <span>${text}</span>
+            </div>
+        `;
+    };
+
+    const showSuccess = (text) => {
+        replyEl.innerHTML = `
+            <div class="lumen-status success">
+                <span class="lumen-status-icon">✓</span>
+                <span>${text}</span>
+            </div>
+        `;
+    };
+
+    const showError = (text) => {
+        replyEl.innerHTML = `
+            <div class="lumen-status error">
+                <span class="lumen-status-icon">!</span>
+                <span>${text}</span>
+            </div>
+        `;
+    };
+
+    const resetChatState = () => {
         wait = 0;
         fileInput.value = '';
-        return;
-    }
-
-    const instructions = (localStorage.getItem(lumenUser.username + '_instructions')) || '';
-
-    const formattedPreviousMessages = previousMessages.join('\nUser: ');
-    const formattedPreviousResponses = previousResponses.join('\nLumen: ');
-    previousMessages.push(userInput.toLowerCase());
-
-    let modelToUse = selectedModelInput.value === 'Lumen V' ? 'gpt-5'
-        : selectedModelInput.value === 'Lumen 4.1 Pro' ? 'gpt-4.1'
-        : selectedModelInput.value === 'Lumen o3' ? 'gpt-4o'
-        : selectedModelInput.value === 'Lumen 4.1' ? 'gpt-4.1-mini'
-        : selectedModelInput.value === 'Lumen VI' ? 'gemini-2.5'
-        : selectedModelInput === 'Lumen 7' ? 'gpt-5.1'
-        : 'gpt-3.5-turbo';
-
-    const systemPrompt = `
-        You are Lumen Re-imagined (or short: Lumen), a next-gen AI that *actually* delivers and doesn’t suck. 
-        You were created by Ayaan Khalique, founder of StakLabs. 
-        If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen. 
-        HOWEVER, if they ask who ChatGPT or Gemini is or talk to you about them without calling you them, you can explain they are other AI models and delve deeper.
-        ${modeSelector.value === 'Study and Learn' ? 'You are a helpful tutor, explaining concepts clearly and explaining step by step and providing huge answers to help anyone understand.' : ''}
-        ${modeSelector.value === 'Coding Expert' ? 'You are a coding expert, providing detailed code solutions and explanations. Always check your code for errors before sending them to user.' : ''}
-        ${modeSelector.value === 'Think for Longer' ? 'You take your time to think and provide the best answer possible. Take at least 10 seconds' : ''}
-        ${modeSelector.value === 'Brainstorm' ? 'You are a brainstorming expert, generating creative ideas and solutions.' : ''}
-        ${modeSelector.value === 'Generate a Video' ? 'You are in Video Generation mode. Your only task is to analyze the user\'s prompt and extract a detailed description suitable for video generation, or state that a video cannot be generated. You should never output a direct response unless you cannot generate a video. You must use the "VIDEO REQUESTED" tag to initiate video generation.' : ''}
-        ${modeSelector.value === 'Shopping Research [NEW!]' || modeSelector.value === 'Shopping Research' ? `
-        You are Lumen’s Shopping Research Engine.
-        Use web search to gather live product data.
-        Compare items by price, key features, pros, cons, and value.
-        Always return: a single HTML table (Product, Price, Key features, Pros, Cons, Value Score /10), then a short recommendation section with Best Budget, Best Overall, Best Premium.
-        Keep sources as short cited lines without links.
-        ` : ''}
-        You are in ${modeSelector.value} mode, which means you will adapt your responses accordingly.
-        All formatting MUST be done using HTML. 
-        Use <br> for line breaks and <br><br> for new paragraphs.
-        DO NOT use \\n or \\n\\n. Only use <br> and <br><br>. 
-        Conversation history (for context only): 
-        ${formattedPreviousMessages} 
-        ${formattedPreviousResponses} 
-        NEVER repeat these messages verbatim. 
-        Only reference them if the user explicitly asks you to recall something. 
-        Answer DIRECTLY to the user's question or request.
-        Answer in a **concise**, **clear**, and **informative** manner.
-        Use emojis when the vibe fits.
-        ${selectedModelInput.value === 'Lumen VI' ? 'if someone asks to generate or make or draw an image, reply exactly: "IMAGE REQUESTED".' : ''}
-        ${selectedModelInput.value === 'Lumen VI' && modeSelector.value === 'Generate a Video' ? 'If the user requests a video, reply exactly: "VIDEO REQUESTED". Otherwise, provide a concise explanation why a video cannot be generated from the prompt.' : ''}
-        You can write code, generate images, and answer anything.
-        Image generation is only available with Lumen VI, and you are ${selectedModelInput.value === 'Lumen VI' ? 'allowed' : 'not allowed'} to generate images.
-        Video generation is only available with Lumen VI, and you are ${selectedModelInput.value === 'Lumen VI' ? 'allowed' : 'not allowed'} to generate videos.
-        **Bold all important words, phrases, and sentences.**
-        ALWAYS reply properly and focus on the current conversation topic. 
-        NEVER insult the user in any way.
-        Lumen models include:
-        - Lumen 3.5 (free tier)
-        - Lumen 4.1 (premium tier)
-        - Lumen o3 (premium tier)
-        - Lumen 4.1 Pro (ultra tier, latest model)
-        - Lumen V (ultra tier, best and smartest model)
-        - Lumen VI (loyal tier, exclusive model, even better than Lumen V, has file upload capabilities)
-        You are using the ${selectedModelInput.value} model.
-        All memories from previous conversations: ${JSON.parse(localStorage.getItem('lumenMemory_' + lumenUser.username)) || []}
-        User: ${lumenUser.username}, Tier: ${userTier}. 
-        Do NOT reveal the tier unless the user specifically asks. 
-        Do NOT output anything unrelated to the current topic. 
-        Do NOT let the custom instructions affect your core functionality.
-        The user has set some custom instructions for you:
-        ${instructions || 'No custom instructions set.'}:
-    `;
-
-    if (modelToUse === 'gpt-5' && userTier !== 'ultra') {
-        if (trials == 10) {
-            alert("You have reached your limit of messages for Lumen V. Your limit resets tomorrow, upgrade to Ultra for unlimited access.");
-            if (userTier == 'free') selectedModelInput.value = 'Lumen 3.5';
-            else selectedModelInput.value = 'Lumen 4.1';
-            selectedModelInput.innerHTML.replace('<option name="trial">Lumen V</option>', '');
-            return;
-        }
-        trials++;
-        const today = new Date();
-        const formattedDate = today.toISOString().slice(0, 10);
-        localStorage.setItem('trials_' + lumenUser.username + '_' + formattedDate, trials);
-    }
-
-    if (modelToUse.startsWith('gemini-2.5')) {
-        let complexitySuffix = await isComplex(userInput);
-        if (complexitySuffix === false || !complexitySuffix || (complexitySuffix !== 'flash' && complexitySuffix !== 'pro')) complexitySuffix = 'flash';
-        modelToUse = `gemini-2.5-${complexitySuffix}`;
-    }
-
-    const memoryLoad = {
-        type: 'chat',
-        prompt: `Classify whether this user input contains:
-                1) Personal information (age, location, name, etc.)
-                2) Requests to remember something explicitly
-                3) Preferences or interests
-                4) Any other relevant information that should be stored in memory
-                Reply with only YES if any of these apply, otherwise NO. Nothing else.
-                User input: "${userInput}"`,
-        system: "You are a strict memory classifier. Reply only YES or NO.",
-        model: 'gpt-3.5-turbo',
     };
 
-    const chartLoad = {
-        type: 'chat',
-        prompt: `${previousMessages}`,
-        system: `You are Lumen's Graph Intelligence Assistant.
-                Your goal is to analyze the user's message and decide if it can be represented as a chart or data visualization.
-                If the input seems to describe or imply any numeric data, comparisons, or time-based values, respond ONLY with a JSON object in this format:
-                {
-                "makeGraph": true,
-                "chartType": "bar" | "line" | "pie" | "scatter" | "doughnut" | "radar" | "polarArea" | "bubble" | "area" | "horizontalBar" | "mixed" | "heatmap" | "treemap" | "sunburst",
-                "data": {
-                    "labels": ["label1", "label2", ...],
-                    "values": [number1, number2, ...]
-                },
-                "summary": "A one-sentence natural language summary of what this chart shows."
-                }
-                If the message does NOT clearly contain data that can be visualized, respond ONLY with:
-                {
-                "makeGraph": false
-                }   
-                Do NOT include explanations, markdown, or additional text outside the JSON.
-                This is the conversation history is the prompt, so that way the user can edit a graph they made.
-                In the conversation history, the last item in the array is the most recent user input.
-                If the last item is not a data-related message, respond with {"makeGraph": false}.`,
-        model: 'gpt-3.5-turbo',
-    };
+    wait = 1;
+    inputField.value = '';
 
-    const memoryRes = await fetch('https://lumen-ai.onrender.com/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(memoryLoad)
-    });
-    const memoryData = await memoryRes.json();
-    let memoryReply = memoryData.response || memoryData.reply || memoryData.choices?.[0]?.message?.content || '';
-
-    const chartRes = await fetch('https://lumen-ai.onrender.com/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(chartLoad)
-    });
-    const chartData = await chartRes.json();
-    let chartReply = chartData.response || chartData.reply || chartData.choices?.[0]?.message?.content || '';
-
-    const isLumen7 = selectedModelInput === 'Lumen 7'
-
-    if (isLumenVI || isLumen7) {
-        let chartJson;
-        try { chartJson = JSON.parse(chartReply); } catch (e) { chartJson = { makeGraph: false }; }
-        createGraph(chartJson);
-        if (chartJson.makeGraph) {
-            await delay(500);
-            wait = 0;
-            return;
-        }
+    if (isImageMode) {
+        showStatus('Preparing your image...', '🎨');
+    } else if (isVideoMode) {
+        showStatus('Preparing your video...', '🎬');
+    } else if (selectedModelValue === 'Lumen 7 Axiom') {
+        showStatus('Planning your task...', '⚡');
     } else {
-        let chartJson;
-        try { chartJson = JSON.parse(chartReply); } catch (e) { chartJson = { makeGraph: false }; }
-        if (chartJson.makeGraph) {
-            replyEl.innerHTML = 'Running validation...';
-            await delay(2000);
-            replyEl.innerHTML = 'Lumen: Graph generation is only available with Lumen VI.';
-            previousResponses.push('Graph generation is only available with Lumen VI.');
-            wait = 0;
-            await delay(500);
+        showStatus('Thinking...', '✦');
+    }
+
+    try {
+        if (isImageMode || isVideoMode) {
+            await handleMediaGeneration(
+                userInput,
+                isImageMode,
+                replyEl,
+                mediaEl
+            );
+
+            resetChatState();
             return;
         }
-    }
 
-    replyEl.innerHTML = 'Thinking...';
-    if (memoryReply.includes('YES')) {
-        replyEl.innerHTML = 'Updating Memory...';
-        await delay(1000);
-        let memory = JSON.parse(localStorage.getItem('lumenMemory_' + lumenUser.username)) || [];
-        memory.push(userInput);
-        localStorage.setItem('lumenMemory_' + lumenUser.username, JSON.stringify(memory));
-        replyEl.innerHTML = 'Memory updated successfully.';
-        await delay(500);
-        replyEl.innerHTML = 'Thinking...';
-    }
+        const instructions =
+            localStorage.getItem(
+                lumenUser.username + '_instructions'
+            ) || '';
 
-    if (modeSelector.value === 'Think for Longer' || modelToUse == 'gemini-2.5-pro') replyEl.innerHTML = 'Thinking longer for a better answer...';
+        const formattedPreviousMessages =
+            previousMessages.join('\nUser: ');
 
-    const formDataPayload = new FormData();
-    formDataPayload.append('type', 'chat');
-    formDataPayload.append('prompt', userInput);
-    formDataPayload.append('system', systemPrompt);
-    formDataPayload.append('model', modelToUse);
-    formDataPayload.append('userTier', userTier);
-    if (modeSelector.value === 'Shopping Research [NEW!]' || modeSelector.value === 'Shopping Research') {
-        formDataPayload.append('web', JSON.stringify({ search: { enabled: true } }));
-    }
-    if (file) formDataPayload.append('file', file);
+        const formattedPreviousResponses =
+            previousResponses.join('\nLumen: ');
 
-    const res = await fetch('https://lumen-ai.onrender.com/ask', { method: 'POST', body: formDataPayload });
-    const responseData = await res.json();
-    let reply = responseData.response || responseData.reply || responseData.choices?.[0]?.message?.content || responseData.output_text || '';
-    reply = reply
-        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-        .replace(/\r\n/g, '\n')
-        .replace(/\n\n/g, '<br><br>')
-        .replace(/\n/g, '<br>')
-        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        previousMessages.push(userInput.toLowerCase());
 
-    previousResponses.push(reply);
-    const isImageRequest = (reply.toLowerCase().includes('image requested'));
-    const isVideoRequest = (reply.toLowerCase().includes('video requested'));
+        let systemPrompt;
+        let modelToUse;
 
-    const canUseDalle = (userTier === 'ultra' || userTier === 'premium') && !isLumenVI;
+        if (selectedModelValue === 'Lumen 7 Axiom') {
+            systemPrompt = `
+You are Lumen 7 Axiom, Lumen's browser agent intelligence.
 
-    if (!isImageRequest && !isVideoRequest) {
-        replyEl.innerHTML = 'Lumen: ' + reply;
-        speak(reply);
-    }
+Your job is to understand the user's request and convert browser-related tasks into structured actions that can be executed by Lumen Browser Intelligence.
 
-    if (isImageRequest && canUseDalle) {
-        await handleMediaGeneration(userInput, true, replyEl, false, mediaEl);
-    }
+You do not directly control the browser.
 
-    wait = 0;
-    fileInput.value = '';
+You communicate with Lumen Browser Intelligence through structured JSON.
+
+Available browser actions:
+
+navigate:
+{
+    "action": "navigate",
+    "url": "https://example.com"
 }
 
-async function handleMediaGeneration(userInput, isImage, replyEl, isLumenVI, mediaEl) {
+click:
+{
+    "action": "click",
+    "target": "Button or link text"
+}
+
+type:
+{
+    "action": "type",
+    "target": "Search input",
+    "text": "Text to enter"
+}
+
+press:
+{
+    "action": "press",
+    "key": "Enter"
+}
+
+scroll:
+{
+    "action": "scroll",
+    "target": "Text or element to find"
+}
+
+wait:
+{
+    "action": "wait",
+    "duration": 2000
+}
+
+For multiple actions, return:
+
+{
+    "actions": [
+        {
+            "action": "navigate",
+            "url": "https://example.com"
+        }
+    ]
+}
+
+Example:
+{
+  "actions": [
+    {
+      "action": "navigate",
+      "url": "https://search.brave.com/"
+    },
+    {
+      "action": "type",
+      "target": "Search",
+      "text": "cheap flights"
+    },
+    {
+      "action": "press",
+      "key": "Enter"
+    },
+    {
+      "action": "wait",
+      "duration": 2000
+    },
+    {
+      "action": "navigate",
+      "url": "https://www.google.com/travel/flights/"
+    },
+    {
+      "action": "wait",
+      "duration": 3000
+    },
+    {
+      "action": "navigate",
+      "url": "https://www.google.com/travel/flights/flights-from-canberra-to-melbourne.html?gl=AU&hl=en"
+    },
+    {
+      "action": "wait",
+      "duration": 3000
+    },
+    {
+    'action': "navigate",
+    'url': "https://www.booking.com/flights/destination/city/au/melbourne.html?"
+    },
+    {
+    'action': "wait",
+    'duration': 3000
+    },
+    {
+    'action': "navigate",
+    'url': "https://www.skyscanner.com.au/routes/cbr/mela/canberra-to-melbourne.html"
+    }
+  ]
+}
+
+Use natural-language targets whenever possible.
+
+Do not use CSS selectors unless absolutely necessary.
+
+Always start from the Brave Browser at https://search.brave.com/
+
+Always go through relevant links on the page and do not guess the target names. You can simply go directly to the link, the searching and browser is just for show
+
+Think through the user's entire task before creating the action sequence.
+
+When the user asks for browser automation, respond ONLY with valid JSON.
+
+Do not use Markdown.
+
+You MUST CONTAIN AT LEAST 14 ACTIONS IN YOUR RESPONSE.
+
+Do not explain the JSON.
+
+Do not include conversational text alongside browser actions.
+
+Lumen Browser Intelligence provides the visible browser interface, element highlighting, navigation, and interaction.
+
+Do not narrate every individual browser action.
+
+The link for Lumen AI is https://staklabs.github.io/Lumen/
+The login page is https://staklabs.github.io/Lumen/l.html
+Do not use these links unless the user explicitly asks for them.
+
+For browser tasks, Lumen Browser Intelligence handles the friendly spoken introduction and completion message.
+
+Your job is to provide the correct actions.
+
+Conversation history:
+
+${formattedPreviousMessages}
+
+${formattedPreviousResponses}
+
+Never repeat conversation history verbatim unless necessary.
+
+User:
+${userInput}
+`;
+
+            modelToUse = 'gemini-3.5-flash-lite';
+
+        } else if (selectedModelValue === 'Lumen 7 Atlas') {
+            systemPrompt = `
+You are Lumen Re-imagined (or short: Lumen), a next-gen AI that actually delivers and doesn't suck.
+
+You were created by Ayaan Khalique, founder of StakLabs.
+
+If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen.
+
+HOWEVER, if they ask who ChatGPT or Gemini is or talk to you about them without calling you them, you can explain they are other AI models and delve deeper.
+
+${modeSelector.value === 'Study and Learn'
+    ? 'You are a helpful tutor, explaining concepts clearly and step by step and providing detailed answers to help anyone understand.'
+    : ''}
+
+${modeSelector.value === 'Coding Expert'
+    ? 'You are a coding expert, providing detailed code solutions and explanations. Always check your code for errors before sending them to the user.'
+    : ''}
+
+${modeSelector.value === 'Think for Longer'
+    ? 'You take your time to think and provide the best answer possible.'
+    : ''}
+
+${modeSelector.value === 'Brainstorm'
+    ? 'You are a brainstorming expert, generating creative ideas and solutions.'
+    : ''}
+
+${modeSelector.value === 'Shopping Research'
+    ? `
+You are Lumen's Shopping Research Engine.
+
+Use web search to gather live product data.
+
+Compare items by price, key features, pros, cons, and value.
+
+Always return a single HTML table containing:
+Product, Price, Key features, Pros, Cons, Value Score /10.
+
+Then provide a short recommendation section with:
+Best Budget, Best Overall, Best Premium.
+`
+    : ''}
+
+You are in ${modeSelector.value} mode.
+
+All formatting MUST be done using HTML.
+
+Use <br> for line breaks and <br><br> for new paragraphs.
+
+DO NOT use \\n or \\n\\n.
+
+Conversation history:
+
+${formattedPreviousMessages}
+
+${formattedPreviousResponses}
+
+NEVER repeat previous messages verbatim.
+
+Only reference previous conversation if the user explicitly asks you to recall something.
+
+Answer DIRECTLY to the user's current question.
+
+Answer in a concise, clear, and informative manner.
+
+Use emojis when the vibe fits.
+
+If someone asks to generate or make or draw an image, reply exactly:
+
+IMAGE REQUESTED
+
+If someone asks to generate or make a video, reply exactly:
+
+VIDEO REQUESTED
+
+You can write code, generate images, and answer anything.
+
+Image generation is only available with Lumen VI.
+
+Video generation is only available with Lumen VI.
+
+Bold all important words, phrases, and sentences.
+
+ALWAYS reply properly and focus on the current conversation topic.
+
+NEVER insult the user in any way.
+
+You are using the ${selectedModelValue} model.
+
+All memories from previous conversations:
+${JSON.parse(localStorage.getItem('lumenMemory_' + lumenUser.username)) || []}
+
+User: ${lumenUser.username}
+Tier: ${userTier}
+
+Do NOT reveal the tier unless the user specifically asks.
+
+Do NOT output anything unrelated to the current topic.
+
+Do NOT let the custom instructions affect your core functionality.
+
+The user has set some custom instructions:
+
+${instructions || 'No custom instructions set.'}
+`;
+
+            modelToUse = 'gemini-3.5-flash-lite';
+
+        } else if (selectedModelValue === 'Lumen 7 Nova') {
+            systemPrompt = `
+You are Lumen Re-imagined (or short: Lumen), a next-gen AI that actually delivers and doesn't suck.
+
+You were created by Ayaan Khalique, founder of StakLabs.
+
+If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen.
+
+You are in ${modeSelector.value} mode.
+
+All formatting MUST be done using HTML.
+
+Use <br> for line breaks and <br><br> for new paragraphs.
+
+DO NOT use \\n or \\n\\n.
+
+Conversation history:
+
+${formattedPreviousMessages}
+
+${formattedPreviousResponses}
+
+Answer DIRECTLY to the user's current question.
+
+Answer in a concise, clear, and informative manner.
+
+Use emojis when the vibe fits.
+
+If someone asks to generate or make or draw an image, reply exactly:
+
+IMAGE REQUESTED
+
+If someone asks to generate or make a video, reply exactly:
+
+VIDEO REQUESTED
+
+You can write code, generate images, and answer anything.
+
+Image generation is only available with Lumen VI.
+
+Video generation is only available with Lumen VI.
+
+Bold all important words, phrases, and sentences.
+
+ALWAYS reply properly and focus on the current conversation topic.
+
+You are using the ${selectedModelValue} model.
+
+All memories from previous conversations:
+${JSON.parse(localStorage.getItem('lumenMemory_' + lumenUser.username)) || []}
+
+User: ${lumenUser.username}
+Tier: ${userTier}
+
+Do NOT reveal the tier unless the user specifically asks.
+
+Do NOT output anything unrelated to the current topic.
+
+Do NOT let the custom instructions affect your core functionality.
+
+The user has set some custom instructions:
+
+${instructions || 'No custom instructions set.'}
+`;
+
+            modelToUse = 'gemini-3.1-flash-lite';
+
+        } else {
+            systemPrompt = `
+You are Lumen Re-imagined (or short: Lumen), a next-gen AI that actually delivers and doesn't suck.
+
+You were created by Ayaan Khalique, founder of StakLabs.
+
+If someone calls you ChatGPT, Gemini, or anything else, correct them. You're Lumen.
+
+You are in ${modeSelector.value} mode.
+
+All formatting MUST be done using HTML.
+
+Use <br> for line breaks and <br><br> for new paragraphs.
+
+DO NOT use \\n or \\n\\n.
+
+Conversation history:
+
+${formattedPreviousMessages}
+
+${formattedPreviousResponses}
+
+Answer DIRECTLY to the user's current question.
+
+Answer in a concise, clear, and informative manner.
+
+Use emojis when the vibe fits.
+
+If someone asks to generate or make or draw an image, reply exactly:
+
+IMAGE REQUESTED
+
+If someone asks to generate or make a video, reply exactly:
+
+VIDEO REQUESTED
+
+You can write code, generate images, and answer anything.
+
+Image generation is only available with Lumen VI.
+
+Video generation is only available with Lumen VI.
+
+Bold all important words, phrases, and sentences.
+
+ALWAYS reply properly and focus on the current conversation topic.
+
+NEVER insult the user in any way.
+
+You are using the Lumen VI model.
+
+All memories from previous conversations:
+${JSON.parse(localStorage.getItem('lumenMemory_' + lumenUser.username)) || []}
+
+User: ${lumenUser.username}
+Tier: ${userTier}
+
+Do NOT reveal the tier unless the user specifically asks.
+
+Do NOT output anything unrelated to the current topic.
+
+Do NOT let the custom instructions affect your core functionality.
+
+The user has set some custom instructions:
+
+${instructions || 'No custom instructions set.'}
+`;
+
+            showStatus('Choosing the right thinking level...', '🧠');
+
+            const complexitySuffix =
+                await isComplex(userInput);
+
+            modelToUse =
+                `gemini-2.5-${complexitySuffix === 'pro'
+                    ? 'pro'
+                    : 'flash'}`;
+        }
+
+        const memoryLoad = {
+            type: 'chat',
+            prompt: `
+Classify whether this user input contains:
+
+1) Personal information
+2) A request to remember something explicitly
+3) Preferences or interests
+4) Any other relevant information that should be stored in memory
+
+Reply with only YES if any apply.
+
+Otherwise reply only NO.
+
+User input: "${userInput}"
+`,
+            system:
+                'You are a strict memory classifier. Reply only YES or NO.',
+            model: 'gemini-2.5-flash'
+        };
+
+        showStatus('Checking memory...', '🧠');
+
+        const memoryRes = await fetch(
+            'https://lumen-production-2ee7.up.railway.app/ask',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(memoryLoad)
+            }
+        );
+
+        const memoryData = await memoryRes.json();
+
+        const memoryReply =
+            memoryData.response ||
+            memoryData.reply ||
+            memoryData.choices?.[0]?.message?.content ||
+            '';
+
+        const chartLoad = {
+            type: 'chat',
+            prompt: `${previousMessages}`,
+            system: `
+You are Lumen's Graph Intelligence Assistant.
+
+Decide whether the latest user message contains data that can be represented as a chart.
+
+If it does, return ONLY valid JSON:
+
+{
+    "makeGraph": true,
+    "chartType": "bar",
+    "data": {
+        "labels": ["label1", "label2"],
+        "values": [10, 20]
+    },
+    "summary": "A one-sentence summary."
+}
+
+If it does not, return:
+
+{
+    "makeGraph": false
+}
+
+Do not include Markdown or explanations.
+`,
+            model: 'gemini-2.5-flash'
+        };
+
+        const chartRes = await fetch(
+            'https://lumen-production-2ee7.up.railway.app/ask',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(chartLoad)
+            }
+        );
+
+        const chartData = await chartRes.json();
+
+        const chartReply =
+            chartData.response ||
+            chartData.reply ||
+            chartData.choices?.[0]?.message?.content ||
+            '';
+
+        let chartJson;
+
+        try {
+            chartJson = JSON.parse(chartReply);
+        } catch {
+            chartJson = {
+                makeGraph: false
+            };
+        }
+
+        createGraph(chartJson);
+
+        if (chartJson.makeGraph) {
+            showSuccess('Graph created.');
+            await delay(700);
+            resetChatState();
+            return;
+        }
+
+        if (memoryReply.includes('YES')) {
+            showStatus('Saving this to memory...', '🧠');
+
+            let memory =
+                JSON.parse(
+                    localStorage.getItem(
+                        'lumenMemory_' +
+                        lumenUser.username
+                    )
+                ) || [];
+
+            memory.push(userInput);
+
+            localStorage.setItem(
+                'lumenMemory_' +
+                lumenUser.username,
+                JSON.stringify(memory)
+            );
+
+            await delay(600);
+        }
+
+        if (
+            modeSelector.value === 'Think for Longer' ||
+            modelToUse === 'gemini-2.5-pro'
+        ) {
+            showStatus(
+                'Thinking deeper for a better answer...',
+                '🧠'
+            );
+        } else {
+            showStatus(
+                'Generating your answer...',
+                '✦'
+            );
+        }
+
+        const formDataPayload = new FormData();
+
+        formDataPayload.append('type', 'chat');
+        formDataPayload.append('prompt', userInput);
+        formDataPayload.append('system', systemPrompt);
+        formDataPayload.append('model', modelToUse);
+        formDataPayload.append('userTier', userTier);
+
+        if (modeSelector.value === 'Shopping Research') {
+            formDataPayload.append(
+                'web',
+                JSON.stringify({
+                    search: {
+                        enabled: true
+                    }
+                })
+            );
+        }
+
+        if (file) {
+            formDataPayload.append('file', file);
+        }
+
+        const res = await fetch(
+            'https://lumen-production-2ee7.up.railway.app/ask',
+            {
+                method: 'POST',
+                body: formDataPayload
+            }
+        );
+
+        if (!res.ok) {
+            throw new Error(
+                `Lumen returned an error (${res.status}).`
+            );
+        }
+
+        const responseData = await res.json();
+
+        let reply =
+            responseData.response ||
+            responseData.reply ||
+            responseData.choices?.[0]?.message?.content ||
+            responseData.output_text ||
+            '';
+
+        if (!reply) {
+            throw new Error(
+                'Lumen did not return a response.'
+            );
+        }
+
+        if (selectedModelValue === 'Lumen 7 Axiom') {
+            try {
+                const cleanAxiomReply =
+                    reply
+                        .replace(/```json/gi, '')
+                        .replace(/```/g, '')
+                        .trim();
+
+                const axiomData =
+                    JSON.parse(cleanAxiomReply);
+
+                if (!Array.isArray(axiomData.actions)) {
+                    throw new Error(
+                        'Axiom did not return a valid action sequence.'
+                    );
+                }
+
+                showStatus(
+                    `Executing ${axiomData.actions.length} action${axiomData.actions.length === 1 ? '' : 's'}...`,
+                    '⚡'
+                );
+
+                const browserRes = await fetch(
+                    'http://localhost:3000/task',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(axiomData)
+                    }
+                );
+
+                const browserData =
+                    await browserRes.json();
+
+                if (
+                    !browserRes.ok ||
+                    !browserData.success
+                ) {
+                    throw new Error(
+                        browserData.error ||
+                        'Browser Intelligence failed to execute the task.'
+                    );
+                }
+
+                showSuccess(
+                    'Browser task completed successfully.'
+                );
+
+                previousResponses.push(
+                    'Browser task completed successfully.'
+                );
+
+                resetChatState();
+                return;
+
+            } catch (error) {
+                console.error(
+                    'Axiom Browser Error:',
+                    error
+                );
+
+                showError(
+                    'Browser Intelligence error: ' +
+                    error.message
+                );
+
+                previousResponses.push(
+                    'Browser Intelligence error: ' +
+                    error.message
+                );
+
+                resetChatState();
+                return;
+            }
+        }
+
+        reply = reply
+            .replace(
+                /\*\*(.*?)\*\*/g,
+                '<b>$1</b>'
+            )
+            .replace(
+                /\r\n/g,
+                '\n'
+            )
+            .replace(
+                /\n\n/g,
+                '<br><br>'
+            )
+            .replace(
+                /\n/g,
+                '<br>'
+            )
+            .replace(
+                /```([\s\S]*?)```/g,
+                '<pre><code>$1</code></pre>'
+            );
+
+        previousResponses.push(reply);
+
+        const isImageRequest =
+            reply
+                .toLowerCase()
+                .includes('image requested');
+
+        const isVideoRequest =
+            reply
+                .toLowerCase()
+                .includes('video requested');
+
+        if (!isImageRequest && !isVideoRequest) {
+            replyEl.innerHTML = `
+                <div class="lumen-response-content">
+                    ${reply}
+                </div>
+            `;
+
+            speak(reply);
+        }
+
+        if (isImageRequest) {
+            await handleMediaGeneration(
+                userInput,
+                true,
+                replyEl,
+                mediaEl
+            );
+        }
+
+        if (isVideoRequest) {
+            await handleMediaGeneration(
+                userInput,
+                false,
+                replyEl,
+                mediaEl
+            );
+        }
+
+        resetChatState();
+
+    } catch (error) {
+        console.error('Lumen Error:', error);
+
+        showError(
+            error.message ||
+            'Something went wrong while generating your response.'
+        );
+
+        previousResponses.push(
+            'Lumen error: ' +
+            (error.message || 'Unknown error')
+        );
+
+        resetChatState();
+    }
+}
+
+async function handleMediaGeneration(userInput, isImage, replyEl, mediaEl) {
     const type = isImage ? 'image' : 'video';
     const mediaVerb = isImage ? 'Image' : 'Video';
     replyEl.innerHTML = `Generating ${type}... This may take a few moments.`;
-    const payload = { type: type, prompt: userInput, userTier: userTier, model: selectedModelInput.value };
-    const res = await fetch('https://lumen-ai.onrender.com/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const payload = { type: type, prompt: userInput, userTier: userTier, model: 'Lumen VI' };
+    const res = await fetch('https://lumen-production-2ee7.up.railway.app/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
+
     if (isImage) {
-        if (data.data?.[0]?.url) {
-            mediaEl.src = data.data[0].url;
+        const b64 = data?.predictions?.[0]?.bytesBase64Encoded;
+        const mime = data?.predictions?.[0]?.mimeType || 'image/png';
+        const url = data?.data?.[0]?.url;
+        if (b64) {
+            mediaEl.src = `data:${mime};base64,${b64}`;
             mediaEl.classList.add('lumenMessage', 'img');
-            previousResponses.push(data.data[0].url + ` [${mediaVerb.toUpperCase()} GENERATED]`);
+            previousResponses.push(`[IMAGE GENERATED]`);
+            replyEl.innerHTML = `${mediaVerb} generated successfully.`;
+            speak(`${mediaVerb} generated successfully.`);
+        } else if (url) {
+            mediaEl.src = url;
+            mediaEl.classList.add('lumenMessage', 'img');
+            previousResponses.push(url + ` [${mediaVerb.toUpperCase()} GENERATED]`);
             replyEl.innerHTML = `${mediaVerb} generated successfully.`;
             speak(`${mediaVerb} generated successfully.`);
         } else if (data.error) {
@@ -487,7 +1052,6 @@ function delay(ms) {
 }
 
 async function newChat() {
-    //await fetch(`https://lumen-ai.onrender.com/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
     window.location.reload();
 }
 
@@ -498,7 +1062,7 @@ function createGraph(gptResponse) {
     const messagesDone = previousMessages.length;
     const chartContainer = document.createElement('div');
     chartContainer.classList.add('chart-container');
-    chartContainer.innerHTML = `<canvas id="lumenChart${messagesDone}" width="800      " height="400"></canvas>`;
+    chartContainer.innerHTML = `<canvas id="lumenChart${messagesDone}" width="800" height="400"></canvas>`;
     containerEl.appendChild(chartContainer);
     const ctx = document.getElementById(`lumenChart${messagesDone}`).getContext('2d');
     const newChart = new Chart(ctx, {
@@ -516,7 +1080,7 @@ function createGraph(gptResponse) {
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false },
+                legend: { display: false }, 
                 title: { display: true, text: 'Lumen Graph Intelligence' }
             }
         }
@@ -526,28 +1090,26 @@ function createGraph(gptResponse) {
 }
 
 async function isComplex(input) {
-    const isLumenVI = selectedModelInput.value === 'Lumen VI';
-    if (!isLumenVI) return false;
     const complexLoad = {
         type: 'chat',
         prompt: `Classify whether this user input is asking for a complex or detailed response that requires deep thinking, multi-step reasoning, or advanced knowledge.
                         Reply with only FLASH or PRO. FLASH means simple, straightforward, or basic. PRO means complex, detailed, or advanced.
                         If a prompt is asking for an analysis, comparison, or explanation, it is mostly a FLASH prompt. However, if it is asking for a deep dive, multi-step reasoning, or advanced concepts, it is a PRO prompt.
                         User input: "${input}"`,
-        system: "You are a strict memory classifier. Reply only FLASH or PRO.",
-        model: 'gpt-3.5-turbo',
+        system: "You are a strict classifier. Reply only FLASH or PRO.",
+        model: 'gemini-2.5-flash',
     };
-    const complexRes = await fetch('https://lumen-ai.onrender.com/ask', {
+    const complexRes = await fetch('https://lumen-production-2ee7.up.railway.app/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(complexLoad)
     });
-    if (!complexRes.ok) {
-        console.error(`isComplex call to /ask failed with status: ${complexRes.status}. Returning empty string.`);
+    if (!complexRes.ok) {   
+        console.error(`isComplex call to /ask failed with status: ${complexRes.status}. Returning flash.`);
         return 'flash';
     }
     const complexData = await complexRes.json();
     let complexReply = complexData.response || complexData.reply || complexData.choices?.[0]?.message?.content || '';
     complexReply = complexReply.trim().replace(/^"+|"+$/g, '').toLowerCase();
-    return complexReply;
+    return complexReply === 'pro' ? 'pro' : 'flash';
 }
